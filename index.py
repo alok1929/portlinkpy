@@ -24,7 +24,7 @@ CORS(app)
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
 
 # Firebase setup
-cred = credentials.Certificate('key.json')
+cred = credentials.Certificate(os.environ['FIREBASE_CONFIG'])
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
