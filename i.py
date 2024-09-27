@@ -1,6 +1,5 @@
 import json
 import re
-
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -16,9 +15,6 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
-
-# Enable CORS for all routes
-CORS(app)
 
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
@@ -38,45 +34,32 @@ def extract_text_from_pdf(pdf_path):
 
 
 def parse_openai_response(response_text):
-    # Try to parse the entire response as JSON
     try:
         return json.loads(response_text)
     except json.JSONDecodeError:
-        pass
-
-    # If that fails, try to extract JSON from the text
-    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
-
-    # If JSON extraction fails, parse the text manually
-    extracted_info = {
-        "Name": "",
-        "Email": "",
-        "GitHub": "",
-        "LinkedIn": "",
-        "Education": [],
-        "Professional Experience": [],
-        "Projects": [],
-        "Questions and Answers": [],
-        "Skills": [],
-    }
-
-    current_section = None
-    for line in response_text.split('\n'):
-        line = line.strip()
-        if line in extracted_info:
-            current_section = line
-        elif current_section and line:
-            if isinstance(extracted_info[current_section], list):
-                extracted_info[current_section].append(line)
-            else:
-                extracted_info[current_section] = line
-
-    return extracted_info
+        # Fallback to manual parsing if JSON parsing fails
+        extracted_info = {
+            "Name": "",
+            "Email": "",
+            "GitHub": "",
+            "LinkedIn": "",
+            "Education": [],
+            "Professional Experience": [],
+            "Projects": [],
+            "Questions and Answers": [],
+            "Skills": [],
+        }
+        current_section = None
+        for line in response_text.split('\n'):
+            line = line.strip()
+            if line in extracted_info:
+                current_section = line
+            elif current_section and line:
+                if isinstance(extracted_info[current_section], list):
+                    extracted_info[current_section].append(line)
+                else:
+                    extracted_info[current_section] = line
+        return extracted_info
 
 
 def extract_resume_info(text):
@@ -92,10 +75,10 @@ def extract_resume_info(text):
     8. Questions and Answers (list of relevant questions and their answers based on the resume)
     9. Skills (list of skills)
 
+    Format the output as a JSON object with the above fields. Ensure that Professional Experience, Skills, Projects, and Questions and Answers are arrays.
+
     Resume text:
     {text}
-
-    Format the output as a JSON object with the above fields. Ensure that Professional Experience,Skills, Projects, and Questions and Answers are arrays.
     """
 
     response = client.chat.completions.create(
@@ -113,16 +96,12 @@ def extract_resume_info(text):
     try:
         extracted_info = parse_openai_response(
             response.choices[0].message.content.strip())
-
         # Ensure all required fields are present and in the correct format
         for key in ['Name', 'Email', 'GitHub', 'LinkedIn']:
-            if key not in extracted_info:
-                extracted_info[key] = ""
-
+            extracted_info.setdefault(key, "")
         for key in ['Education', 'Professional Experience', 'Projects', 'Questions and Answers', 'Skills']:
             if key not in extracted_info or not isinstance(extracted_info[key], list):
                 extracted_info[key] = []
-
         return extracted_info
     except Exception as e:
         raise ValueError(f"Error in parsing OpenAI response: {str(e)}") from e
@@ -179,9 +158,6 @@ def upload_file():
         return jsonify({"error": str(e)}), 500
 
 
-VERCEL_PROJECT_ID = "team_zx1T3VUMMDpm6GpVRHXgV9Hi"
-
-
 @app.route('/create-vercel-project', methods=['POST', 'OPTIONS'])
 def create_vercel_project():
     if request.method == 'OPTIONS':
@@ -189,41 +165,63 @@ def create_vercel_project():
 
     data = request.json
     username = data.get('username')
-    extracted_info = data.get('extracted_info')
 
-    if not username or not extracted_info:
-        return jsonify({"error": "Username and resume info required"}), 400
-
-    # Create a new alias (subdomain) for the existing project
-    subdomain = f"{username}-resume"
-    alias = f"{subdomain}.{os.environ('VERCEL_DOMAIN', 'paperu-rho.vercel.app')}"
-
-    headers = {
-        "Authorization": f"Bearer {os.environ('VERCEL_TOKEN')}",
-        "Content-Type": "application/json"
-    }
-
-    # API endpoint to add a new alias
-    url = f"https://api.vercel.com/v2/projects/{os.getenv('VERCEL_PROJECT_ID')}/domains"
-
-    payload = {
-        "name": alias
-    }
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
 
     try:
+        doc_ref = db.collection('users').document(username)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            return jsonify({"error": "Resume data not found for this user"}), 404
+
+        extracted_info = doc.to_dict()
+
+        path = f"{username}-resume"
+        full_url = f"{os.getenv('VERCEL_DOMAIN', 'https://paperu-rho.vercel.app')}/{path}"
+
+        headers = {
+            "Authorization": f"Bearer {os.getenv('VERCEL_TOKEN')}",
+            "Content-Type": "application/json"
+        }
+
+        url = "https://api.vercel.com/v13/deployments"
+
+        payload = {
+            "name": os.getenv('VERCEL_PROJECT_NAME', 'paperu'),
+            "target": "production",
+            "projectId": os.getenv('VERCEL_PROJECT_ID'),
+            "routes": [
+                {
+                    "src": f"/{path}",
+                    "dest": "/"
+                }
+            ],
+            "env": {
+                "RESUME_DATA": json.dumps(extracted_info)
+            }
+        }
+
         response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()  # This will raise an exception for HTTP errors
+        response.raise_for_status()
 
         return jsonify({
-            "message": "Resume subdomain created successfully",
-            "url": f"https://{alias}"
+            "message": "Resume page created successfully",
+            "url": full_url
         }), 200
+
+    except firestore.NotFound:
+        return jsonify({"error": "User not found in the database"}), 404
     except requests.exceptions.RequestException as e:
-        app.logger.error(f"Error creating Vercel subdomain: {str(e)}")
+        app.logger.error(f"Error creating Vercel deployment: {str(e)}")
         return jsonify({
-            "error": "Failed to create subdomain",
+            "error": "Failed to create resume page",
             "details": str(e)
         }), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 
 @app.errorhandler(404)
