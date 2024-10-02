@@ -24,7 +24,8 @@ CORS(app)
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
 
 # Firebase setup
-cred = credentials.Certificate(os.environ['FIREBASE_CONFIG'])
+cred_dict = json.loads(os.environ['FIREBASE_CONFIG'])
+cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -179,7 +180,7 @@ def upload_file():
         return jsonify({"error": str(e)}), 500
 
 
-VERCEL_PROJECT_ID = "team_zx1T3VUMMDpm6GpVRHXgV9Hi"
+vid = "team_zx1T3VUMMDpm6GpVRHXgV9Hi"
 
 
 @app.route('/create-vercel-project', methods=['POST', 'OPTIONS'])
@@ -196,15 +197,15 @@ def create_vercel_project():
 
     # Create a new alias (subdomain) for the existing project
     subdomain = f"{username}-resume"
-    alias = f"{subdomain}.{os.environ('VERCEL_DOMAIN', 'paperu-rho.vercel.app')}"
+    alias = f"{subdomain}.{os.environ('vdomain', 'paperu-rho.vercel.app')}"
 
     headers = {
-        "Authorization": f"Bearer {os.environ('VERCEL_TOKEN')}",
+        "Authorization": f"Bearer {os.environ('vtoken')}",
         "Content-Type": "application/json"
     }
 
     # API endpoint to add a new alias
-    url = f"https://api.vercel.com/v2/projects/{os.getenv('VERCEL_PROJECT_ID')}/domains"
+    url = f"https://api.vercel.com/v2/projects/{os.getenv('vid')}/domains"
 
     payload = {
         "name": alias
