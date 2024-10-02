@@ -1,6 +1,5 @@
 import json
 import re
-
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -15,10 +14,10 @@ from firebase_admin import credentials, firestore
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 # Enable CORS for all routes
-CORS(app)
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000",
+     "https://portlink-j2sxdx2qb-alok1929s-projects.vercel.app"]}}, supports_credentials=True)
 
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
@@ -39,21 +38,16 @@ def extract_text_from_pdf(pdf_path):
 
 
 def parse_openai_response(response_text):
-    # Try to parse the entire response as JSON
     try:
         return json.loads(response_text)
     except json.JSONDecodeError:
-        pass
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
 
-    # If that fails, try to extract JSON from the text
-    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
-
-    # If JSON extraction fails, parse the text manually
     extracted_info = {
         "Name": "",
         "Email": "",
@@ -96,7 +90,7 @@ def extract_resume_info(text):
     Resume text:
     {text}
 
-    Format the output as a JSON object with the above fields. Ensure that Professional Experience,Skills, Projects, and Questions and Answers are arrays.
+    Format the output as a JSON object with the above fields. Ensure that Professional Experience, Skills, Projects, and Questions and Answers are arrays.
     """
 
     response = client.chat.completions.create(
@@ -115,7 +109,6 @@ def extract_resume_info(text):
         extracted_info = parse_openai_response(
             response.choices[0].message.content.strip())
 
-        # Ensure all required fields are present and in the correct format
         for key in ['Name', 'Email', 'GitHub', 'LinkedIn']:
             if key not in extracted_info:
                 extracted_info[key] = ""
@@ -136,6 +129,15 @@ app.config['DATA_FOLDER'] = DATA_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(DATA_FOLDER, exist_ok=True)
+
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods',
+                         'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 
 @app.route('/resume/<username>', methods=['GET'])
@@ -180,9 +182,6 @@ def upload_file():
         return jsonify({"error": str(e)}), 500
 
 
-vid = "team_zx1T3VUMMDpm6GpVRHXgV9Hi"
-
-
 @app.route('/create-vercel-project', methods=['POST', 'OPTIONS'])
 def create_vercel_project():
     if request.method == 'OPTIONS':
@@ -195,16 +194,14 @@ def create_vercel_project():
     if not username or not extracted_info:
         return jsonify({"error": "Username and resume info required"}), 400
 
-    # Create a new alias (subdomain) for the existing project
     subdomain = f"{username}-resume"
-    alias = f"{subdomain}.{os.environ('vdomain', 'paperu-rho.vercel.app')}"
+    alias = f"{subdomain}.{os.environ.get('vdomain', 'paperu-rho.vercel.app')}"
 
     headers = {
-        "Authorization": f"Bearer {os.environ('vtoken')}",
+        "Authorization": f"Bearer {os.environ.get('vtoken')}",
         "Content-Type": "application/json"
     }
 
-    # API endpoint to add a new alias
     url = f"https://api.vercel.com/v2/projects/{os.getenv('vid')}/domains"
 
     payload = {
@@ -213,7 +210,7 @@ def create_vercel_project():
 
     try:
         response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()  # This will raise an exception for HTTP errors
+        response.raise_for_status()
 
         return jsonify({
             "message": "Resume subdomain created successfully",
