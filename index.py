@@ -16,9 +16,12 @@ load_dotenv()
 app = Flask(__name__)
 
 # Enable CORS for all routes
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000",
-     "https://portlink-j2sxdx2qb-alok1929s-projects.vercel.app"]}}, supports_credentials=True)
-
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", 
+                                         "https://portlink-65dg.vercel.app", 
+                                         "https://portlinkpy.vercel.app"],
+                             "methods": ["GET", "POST", "OPTIONS"],
+                             "allow_headers": ["Content-Type", "Authorization"]}},
+     supports_credentials=True)
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
 
@@ -232,6 +235,14 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'https://portlink-65dg.vercel.app')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 
 def handle_preflight():
