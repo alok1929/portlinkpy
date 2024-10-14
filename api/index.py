@@ -22,7 +22,6 @@ app = Flask(__name__)
 
 # CORS setup
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
-print("cors")
 
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
