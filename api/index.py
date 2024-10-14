@@ -21,8 +21,7 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 
 # CORS setup
-CORS(app, resources={r"/api/*": {"origins": "*",
-     "methods": ["GET", "POST", "OPTIONS"]}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
