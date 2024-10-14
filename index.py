@@ -194,7 +194,7 @@ def create_vercel_project():
         return jsonify({"error": "Username and resume info required"}), 400
 
     subdomain = f"{username}-resume"
-    alias = f"{subdomain}.{os.environ.get('vdomain', 'paperu-rho.vercel.app')}"
+    alias = f"{subdomain}.{os.environ.get('vdomain', 'https://portlink-omega.vercel.app/')}"
 
     headers = {
         "Authorization": f"Bearer {os.environ.get('vtoken')}",
