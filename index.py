@@ -15,9 +15,8 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Enable CORS for all routes
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000",
-     "https://portlink-j2sxdx2qb-alok1929s-projects.vercel.app"]}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://portlink-git-main-alok1929s-projects.vercel.app",
+     "https://portlinkpy.vercel.app"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}}, supports_credentials=True)
 
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
