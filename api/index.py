@@ -1,23 +1,28 @@
 import json
 import re
-import requests
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import os
 from io import BytesIO
+import logging
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import openai
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, firestore
+import requests
 
 # Load environment variables
 load_dotenv()
 
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://portlink-git-main-alok1929s-projects.vercel.app", "https://portlink-omega.vercel.app",
-     "https://portlinkpy.vercel.app"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}}, supports_credentials=True)
+# CORS setup
+CORS(app, resources={r"/api/*": {"origins": "*",
+     "methods": ["GET", "POST", "OPTIONS"]}})
 
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
@@ -122,32 +127,13 @@ def extract_resume_info(text):
         raise ValueError(f"Error in parsing OpenAI response: {str(e)}") from e
 
 
-
-
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Headers',
-                         'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods',
-                         'GET,PUT,POST,DELETE,OPTIONS')
-    return response
-
-
-@app.route('/resume/<username>', methods=['GET'])
-def get_resume_info(username):
-    try:
-        resume_ref = db.collection('users').document(username)
-        resume_data = resume_ref.get().to_dict()
-        if resume_data:
-            return jsonify({"extracted_info": resume_data}), 200
-        else:
-            return jsonify({"error": "Resume data not found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST'])
 def upload_file():
+    logging.debug(f"Received request: {request.method} {request.path}")
+    logging.debug(f"Request headers: {request.headers}")
+    logging.debug(f"Request form data: {request.form}")
+    logging.debug(f"Request files: {request.files}")
+
     if 'file' not in request.files or 'username' not in request.form:
         return jsonify({"error": "No file part or username in the request"}), 400
 
@@ -171,11 +157,31 @@ def upload_file():
 
         return jsonify({"success": "File uploaded and data saved successfully", "extracted_info": extracted_info}), 200
     except Exception as e:
+        logging.error(f"Error in upload_file: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/create-vercel-project', methods=['POST', 'OPTIONS'])
+@app.route('/api/resume/<username>', methods=['GET'])
+def get_resume_info(username):
+    logging.debug(f"Received request: {request.method} {request.path}")
+    try:
+        resume_ref = db.collection('users').document(username)
+        resume_data = resume_ref.get().to_dict()
+        if resume_data:
+            return jsonify({"extracted_info": resume_data}), 200
+        else:
+            return jsonify({"error": "Resume data not found"}), 404
+    except Exception as e:
+        logging.error(f"Error in get_resume_info: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/create-vercel-project', methods=['POST', 'OPTIONS'])
 def create_vercel_project():
+    logging.debug(f"Received request: {request.method} {request.path}")
+    logging.debug(f"Request headers: {request.headers}")
+    logging.debug(f"Request body: {request.json}")
+
     if request.method == 'OPTIONS':
         return handle_preflight()
 
@@ -210,11 +216,12 @@ def create_vercel_project():
             "url": f"https://{alias}"
         }), 200
     except requests.exceptions.RequestException as e:
-        app.logger.error(f"Error creating Vercel subdomain: {str(e)}")
+        logging.error(f"Error creating Vercel subdomain: {str(e)}")
         return jsonify({
             "error": "Failed to create subdomain",
             "details": str(e)
         }), 500
+
 
 @app.errorhandler(404)
 def not_found(error):
@@ -228,12 +235,11 @@ def internal_error(error):
 
 def handle_preflight():
     response = jsonify({'message': 'Preflight request successful'})
-    response.headers.add('Access-Control-Allow-Origin',
-                         'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     response.headers.add('Access-Control-Allow-Methods', 'POST')
     return response
 
 
-# Vercel requires this
-app.debug = True
+if __name__ == '__main__':
+    app.run(debug=True)
