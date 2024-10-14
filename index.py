@@ -122,13 +122,6 @@ def extract_resume_info(text):
         raise ValueError(f"Error in parsing OpenAI response: {str(e)}") from e
 
 
-UPLOAD_FOLDER = './uploads'
-DATA_FOLDER = './data'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['DATA_FOLDER'] = DATA_FOLDER
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(DATA_FOLDER, exist_ok=True)
 
 
 @app.after_request
@@ -168,17 +161,11 @@ def upload_file():
         return jsonify({"error": "Invalid file format. Please upload a PDF."}), 400
 
     try:
-        # Read the file content directly into memory
         file_content = file.read()
-
-        # Use BytesIO to create a file-like object from the content
         pdf_file = BytesIO(file_content)
-
-        # Extract text from the PDF
         resume_text = extract_text_from_pdf(pdf_file)
         extracted_info = extract_resume_info(resume_text)
 
-        # Save to Firebase
         doc_ref = db.collection('users').document(username)
         doc_ref.set(extracted_info)
 
@@ -229,7 +216,6 @@ def create_vercel_project():
             "details": str(e)
         }), 500
 
-
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({"error": "Not found"}), 404
@@ -249,5 +235,5 @@ def handle_preflight():
     return response
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Vercel requires this
+app.debug = True
