@@ -15,7 +15,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://portlink-git-main-alok1929s-projects.vercel.app",
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://portlink-git-main-alok1929s-projects.vercel.app", "https://portlink-omega.vercel.app",
      "https://portlinkpy.vercel.app"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}}, supports_credentials=True)
 
 # OpenAI setup
@@ -194,7 +194,8 @@ def create_vercel_project():
         return jsonify({"error": "Username and resume info required"}), 400
 
     subdomain = f"{username}-resume"
-    alias = f"{subdomain}.{os.environ.get('vdomain', 'https://portlink-omega.vercel.app/')}"
+    base_domain = os.environ.get('vdomain', 'portlink-omega.vercel.app')
+    alias = f"{subdomain}.{base_domain}"
 
     headers = {
         "Authorization": f"Bearer {os.environ.get('vtoken')}",
