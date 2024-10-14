@@ -4,6 +4,7 @@ import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+from io import BytesIO
 import openai
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
@@ -28,8 +29,8 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 
-def extract_text_from_pdf(pdf_path):
-    reader = PdfReader(pdf_path)
+def extract_text_from_pdf(pdf_file):
+    reader = PdfReader(pdf_file)
     text = ""
     for page in reader.pages:
         text += page.extract_text()
@@ -166,13 +167,18 @@ def upload_file():
     if not file.filename.endswith('.pdf'):
         return jsonify({"error": "Invalid file format. Please upload a PDF."}), 400
 
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-    file.save(file_path)
-
     try:
-        resume_text = extract_text_from_pdf(file_path)
+        # Read the file content directly into memory
+        file_content = file.read()
+
+        # Use BytesIO to create a file-like object from the content
+        pdf_file = BytesIO(file_content)
+
+        # Extract text from the PDF
+        resume_text = extract_text_from_pdf(pdf_file)
         extracted_info = extract_resume_info(resume_text)
 
+        # Save to Firebase
         doc_ref = db.collection('users').document(username)
         doc_ref.set(extracted_info)
 
