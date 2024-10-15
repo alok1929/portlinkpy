@@ -21,7 +21,8 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 
 # CORS setup
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": "https://portlink-omega.vercel.app/"}})
+CORS(app, resources={
+     r"/api/*": {"origins": ["https://portlink-omega.vercel.app"], "methods": ["GET", "POST", "OPTIONS"]}})
 
 # OpenAI setup
 client = openai.OpenAI(api_key=os.environ['OPENAI'])
@@ -128,60 +129,38 @@ def extract_resume_info(text):
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    logging.debug(f"Received request: {request.method} {request.path}")
-
-    # Log request details
-    logging.debug(f"Request headers: {request.headers}")
-    logging.debug(f"Request form data: {request.form}")
-    logging.debug(f"Request files: {request.files}")
-
-    # Check if file and username are present in the request
-    if 'file' not in request.files or 'username' not in request.form:
-        logging.error("No file or username in the request.")
-        return jsonify({"error": "No file or username in the request"}), 400
-
-    file = request.files['file']
-    username = request.form['username']
-
-    # Check if the file is empty
-    if file.filename == '':
-        logging.error("No file selected.")
-        return jsonify({"error": "No selected file"}), 400
-
-    # Validate file format
-    if not file.filename.endswith('.pdf'):
-        logging.error("Invalid file format. Only PDFs are allowed.")
-        return jsonify({"error": "Invalid file format. Please upload a PDF."}), 400
-
+    logging.info("Upload route accessed")
     try:
-        # Log file processing steps
-        logging.debug(f"Reading file {file.filename} for user {username}")
+        if 'file' not in request.files or 'username' not in request.form:
+            logging.error("Missing file or username in request")
+            return jsonify({"error": "No file part or username in the request"}), 400
+
+        file = request.files['file']
+        username = request.form['username']
+
+        logging.info(f"Received file: {file.filename} for user: {username}")
+
+        if file.filename == '':
+            logging.error("No selected file")
+            return jsonify({"error": "No selected file"}), 400
+
+        if not file.filename.endswith('.pdf'):
+            logging.error("Invalid file format")
+            return jsonify({"error": "Invalid file format. Please upload a PDF."}), 400
 
         file_content = file.read()
         pdf_file = BytesIO(file_content)
 
-        logging.debug(f"Extracting text from PDF file for user {username}")
         resume_text = extract_text_from_pdf(pdf_file)
-
-        logging.debug(
-            f"Extracting resume info using OpenAI for user {username}")
         extracted_info = extract_resume_info(resume_text)
 
-        # Log extracted information
-        logging.debug(
-            f"Extracted resume information for user {username}: {extracted_info}")
-
-        # Save to Firebase Firestore
         doc_ref = db.collection('users').document(username)
         doc_ref.set(extracted_info)
 
-        logging.info(f"Resume data saved successfully for user {username}")
+        logging.info("File processed and data saved successfully")
         return jsonify({"success": "File uploaded and data saved successfully", "extracted_info": extracted_info}), 200
-
     except Exception as e:
-        # Log any errors that occur during file processing or data extraction
-        logging.error(
-            f"Error in upload_file for user {username}: {str(e)}", exc_info=True)
+        logging.error(f"Error in upload_file: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -250,6 +229,17 @@ def create_vercel_project():
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({"error": "Not found"}), 404
+
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin',
+                         'https://portlink-omega.vercel.app')
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods',
+                         'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 
 @app.errorhandler(500)
