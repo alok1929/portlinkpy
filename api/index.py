@@ -92,7 +92,7 @@ def extract_resume_info(text):
     Extract the following information from the given resume text:
     1. Name
     2. Email
-    3. GitHub (if available)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
+    3. GitHub (if available)
     4. LinkedIn (if available)
     5. Education (list of degrees)
     6. Professional Experience (list of roles with descriptions and durations)
