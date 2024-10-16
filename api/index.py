@@ -25,7 +25,7 @@ CORS(app, resources={
      r"/api/*": {"origins": ["https://portlink-omega.vercel.app"], "methods": ["GET", "POST", "OPTIONS"]}})
 
 # OpenAI setup
-client = openai.OpenAI(api_key=os.environ['OPENAI'])
+client = openai.OpenAI(os.environ['OPENAI'])
 
 # Firebase setup
 cred_dict = json.loads(os.environ['FIREBASE_CONFIG'])
