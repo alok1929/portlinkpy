@@ -37,6 +37,11 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 
+@app.route('/')
+def home():
+    return "Flask app is running!", 200
+
+
 def extract_text_from_pdf(pdf_file):
     reader = PdfReader(pdf_file)
     text = ""
@@ -87,7 +92,7 @@ def extract_resume_info(text):
     Extract the following information from the given resume text:
     1. Name
     2. Email
-    3. GitHub (if available)
+    3. GitHub (if available)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
     4. LinkedIn (if available)
     5. Education (list of degrees)
     6. Professional Experience (list of roles with descriptions and durations)
@@ -130,7 +135,7 @@ def extract_resume_info(text):
         raise ValueError(f"Error in parsing OpenAI response: {str(e)}") from e
 
 
-@app.route('/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST'])
 def upload_file():
     logging.info("Upload route accessed")
 
@@ -179,7 +184,7 @@ def upload_file():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/resume/<username>', methods=['GET'])
+@app.route('/api/resume/<username>', methods=['GET'])
 def get_resume_info(username):
     logging.debug(f"Received request: {request.method} {request.path}")
 
@@ -200,7 +205,7 @@ def get_resume_info(username):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/create-vercel-project', methods=['POST'])
+@app.route('/api/create-vercel-project', methods=['POST'])
 def create_vercel_project():
     logging.debug(f"Received request: {request.method} {request.path}")
     logging.debug(f"Request headers: {request.headers}")
@@ -271,3 +276,7 @@ def handle_preflight():
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     response.headers.add('Access-Control-Allow-Methods', 'POST')
     return response
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
