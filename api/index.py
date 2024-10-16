@@ -1,12 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-
 app = Flask(__name__)
 
 # CORS setup
-CORS(app, resources={
-     r"/api/*": {"origins": ["https://portlink-omega.vercel.app"], "methods": ["GET", "POST", "OPTIONS"]}})
+CORS(app)
 
 
 @app.route('/upload', methods=['POST'])
@@ -31,6 +29,11 @@ def upload_file():
         'size': len(file.read()),
         'type': file.content_type
     })
+
+
+@app.route('/')
+def home():
+    return "Flask server is running!"
 
 
 if __name__ == '__main__':
