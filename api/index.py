@@ -25,7 +25,12 @@ def upload_file():
     # You can save the file if needed or just process it
     # file.save(f"/path/to/save/{file.filename}")
 
-    return jsonify({'message': f'File {file.filename} uploaded successfully!'})
+    return jsonify({
+        'message': 'File uploaded successfully!',
+        'filename': file.filename,
+        'size': len(file.read()),
+        'type': file.content_type
+    })
 
 
 if __name__ == '__main__':
