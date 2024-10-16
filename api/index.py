@@ -9,32 +9,35 @@ CORS(app)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part in the request'}), 400
 
-    file = request.files['file']
+        file = request.files['file']
 
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
 
-    # Log file information
-    print(f"File received: {file.filename}")
+        # Log file information
+        print(f"File received: {file.filename}")
 
-    # You can save the file if needed or just process it
-    # file.save(f"/path/to/save/{file.filename}")
+        # Read the file content
+        file_content = file.read()
 
-    return jsonify({
-        'message': 'File uploaded successfully!',
-        'filename': file.filename,
-        'size': len(file.read()),
-        'type': file.content_type
-    })
+        # You can process the file content here if needed
+        # For example, you could save it to a cloud storage service
+
+        return jsonify({
+            'message': 'File uploaded successfully!',
+            'filename': file.filename,
+            'size': len(file_content),
+            'type': file.content_type
+        })
+    except Exception as e:
+        print(f"Error processing file: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/')
 def home():
     return "Flask server is running!"
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
