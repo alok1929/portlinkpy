@@ -1,10 +1,14 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import sys
+import traceback
+
 
 app = Flask(__name__)
 
 # CORS setup
-CORS(app)
+CORS(app, resources={
+     r"/api/*": {"origins": ["https://portlink-omega.vercel.app"], "methods": ["GET", "POST", "OPTIONS"]}})
 
 
 @app.route('/upload', methods=['POST'])
@@ -36,6 +40,12 @@ def upload_file():
     except Exception as e:
         print(f"Error processing file: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    print(f"Unhandled Exception: {str(e)}")
+    print(traceback.format_exc())
+    return jsonify(error=str(e)), 500
 
 
 @app.route('/')
