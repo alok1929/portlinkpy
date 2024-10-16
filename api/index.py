@@ -140,30 +140,21 @@ def extract_resume_info(text):
 def upload_file():
     logging.info("Upload route accessed")
 
-    try:
-        # Check if the file and username are present in the request
-        if 'file' not in request.files or 'username' not in request.form:
-            logging.error("Missing file or username in request")
-            return jsonify({"error": "No file part or username in the request"}), 400
+    try:       
 
         # Retrieve the file and username from the request
-        file = request.files['file']
         username = request.form['username']
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part in the request'}), 400
 
-        logging.info(f"Received file: {file.filename} for user: {username}")
+        file = request.files['file']
 
-        # Check if the file is empty
         if file.filename == '':
-            logging.error("No selected file")
-            return jsonify({"error": "No selected file"}), 400
+            return jsonify({'error': 'No selected file'}), 400
 
-        # Validate that the file is a PDF
-        if not file.filename.endswith('.pdf'):
-            logging.error("Invalid file format")
-            return jsonify({"error": "Invalid file format. Please upload a PDF."}), 400
-
-        # Read the file content and process it
+        # Process file here
         file_content = file.read()
+
         pdf_file = BytesIO(file_content)
 
         # Extract text from the PDF and extract resume information
