@@ -5,7 +5,7 @@ from io import BytesIO
 import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 import firebase_admin
@@ -25,7 +25,10 @@ CORS(app, resources={
      r"/api/*": {"origins": ["https://portlink-omega.vercel.app"], "methods": ["GET", "POST", "OPTIONS"]}})
 
 # OpenAI setup
-client = openai.OpenAI(os.environ['OPENAI'])
+client = OpenAI(
+    # This is the default and can be omitted
+    api_key=os.environ.get("OPENAI"),
+)
 
 # Firebase setup
 cred_dict = json.loads(os.environ['FIREBASE_CONFIG'])
