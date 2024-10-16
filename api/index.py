@@ -1,35 +1,33 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import sys
-import traceback
-
+import os
 
 app = Flask(__name__)
-
-# CORS setup
-CORS(app, resources={
-     r"/api/*": {"origins": ["https://portlink-omega.vercel.app"], "methods": ["GET", "POST", "OPTIONS"]}})
+CORS(app)
 
 
-@app.route('/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST'])
 def upload_file():
+    print("Received upload request")
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {request.headers}")
+    print(f"Request files: {request.files}")
+    print(f"Request form: {request.form}")
+
     try:
         if 'file' not in request.files:
+            print("No file part in the request")
             return jsonify({'error': 'No file part in the request'}), 400
 
         file = request.files['file']
 
         if file.filename == '':
+            print("No selected file")
             return jsonify({'error': 'No selected file'}), 400
 
-        # Log file information
         print(f"File received: {file.filename}")
 
-        # Read the file content
         file_content = file.read()
-
-        # You can process the file content here if needed
-        # For example, you could save it to a cloud storage service
 
         return jsonify({
             'message': 'File uploaded successfully!',
@@ -39,15 +37,14 @@ def upload_file():
         })
     except Exception as e:
         print(f"Error processing file: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
-
-@app.errorhandler(Exception)
-def handle_exception(e):
-    print(f"Unhandled Exception: {str(e)}")
-    print(traceback.format_exc())
-    return jsonify(error=str(e)), 500
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
-@app.route('/')
-def home():
-    return "Flask server is running!"
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'healthy'}), 200
+
+
+# This is only used when running locally. Vercel uses the `app` directly.
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
