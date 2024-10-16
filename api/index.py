@@ -29,6 +29,7 @@ client = OpenAI(
     # This is the default and can be omitted
     api_key=os.environ.get("OPENAI"),
 )
+print("openai api")
 
 # Firebase setup
 cred_dict = json.loads(os.environ['FIREBASE_CONFIG'])
