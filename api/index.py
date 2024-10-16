@@ -20,9 +20,13 @@ logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
-# CORS setup
 CORS(app, resources={
-     r"/api/*": {"origins": ["https://portlink-omega.vercel.app"], "methods": ["GET", "POST", "OPTIONS"]}})
+    r"/api/*": {
+        "origins": ["https://portlink-omega.vercel.app", "https://portlinkpy.vercel.app"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # OpenAI setup
 client = OpenAI(
