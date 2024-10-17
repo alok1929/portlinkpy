@@ -9,14 +9,7 @@ import re
 import json
 
 app = Flask(__name__)
-
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["https://portlink-omega.vercel.app", "https://portlinkpy.vercel.app"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+CORS(app)
 
 # OpenAI setup
 client = OpenAI(
