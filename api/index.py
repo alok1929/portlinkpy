@@ -20,7 +20,7 @@ client = OpenAI(
 )
 
 
-print("openai client created")
+print("openai client creted")
 
 # Firebase setup
 cred_dict = json.loads(os.environ['FIREBASE_CONFIG'])
