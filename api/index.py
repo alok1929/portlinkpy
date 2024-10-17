@@ -22,9 +22,10 @@ app = Flask(__name__)
 
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["https://portlink-omega.vercel.app", "https://portlinkpy.vercel.app"],
+        "origins": ["https://portlink-omega.vercel.app", "http://localhost:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "max_age": 3600
     }
 })
 
@@ -142,42 +143,51 @@ def extract_resume_info(text):
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    logging.info("Upload route accessed")
-
-    try:       
-
-        # Retrieve the file and username from the request
-        username = request.form['username']
+    try:
+        # Check for file in request
         if 'file' not in request.files:
             return jsonify({'error': 'No file part in the request'}), 400
 
         file = request.files['file']
 
+        # Check if file was selected
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
 
-        # Process file here
-        file_content = file.read()
+        # Verify file is a PDF
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Only PDF files are allowed'}), 400
 
+        # Read file content
+        file_content = file.read()
         pdf_file = BytesIO(file_content)
 
-        # Extract text from the PDF and extract resume information
-        resume_text = extract_text_from_pdf(pdf_file)
-        extracted_info = extract_resume_info(resume_text)
+        # Extract text and process resume
+        try:
+            resume_text = extract_text_from_pdf(pdf_file)
+            extracted_info = extract_resume_info(resume_text)
 
-        # Save extracted info to Firestore under the user's document
-        doc_ref = db.collection('users').document(username)
-        doc_ref.set(extracted_info)
+            # Save to Firestore if username is provided
+            username = request.form.get('username')
+            if username:
+                doc_ref = db.collection('users').document(username)
+                doc_ref.set(extracted_info)
 
-        logging.info("File processed and data saved successfully")
-        return jsonify({
-            "success": "File uploaded and data saved successfully",
-            "extracted_info": extracted_info
-        }), 200
+            return jsonify({
+                'success': True,
+                'message': 'File processed successfully!',
+                'filename': file.filename,
+                'extracted_info': extracted_info
+            })
+
+        except Exception as process_error:
+            return jsonify({
+                'error': f'Error processing resume: {str(process_error)}'
+            }), 422  # Unprocessable Entity
 
     except Exception as e:
-        logging.error(f"Error in upload_file: {str(e)}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        print(f"Error processing file: {str(e)}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
 @app.route('/api/resume/<username>', methods=['GET'])
@@ -252,12 +262,9 @@ def not_found(error):
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin',
-                         'https://portlink-omega.vercel.app')
-    response.headers.add('Access-Control-Allow-Headers',
-                         'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods',
-                         'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
 
