@@ -16,7 +16,7 @@ client = OpenAI(
     api_key=os.environ.get("OPENAI"),
 )
 
-print("openai client created")
+print("openai client creat")
 
 @app.route('/', methods=['GET'])
 def home():
