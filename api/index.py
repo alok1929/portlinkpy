@@ -153,10 +153,10 @@ def upload_file():
 
             # Process file here
             file_content = file.read()
-
+            
             # Extract text from PDF
             pdf_text = extract_text_from_pdf(BytesIO(file_content))
-
+            
             # Extract resume information
             resume_info = extract_resume_info(pdf_text)
 
@@ -168,8 +168,6 @@ def upload_file():
                 'originalFilename': file.filename
             })
 
-            print("uploaded to firestoredb successfully")
-
             response = jsonify({
                 'message': 'File uploaded, processed, and saved to database successfully!',
                 'username': username,
@@ -177,17 +175,15 @@ def upload_file():
                 'original_filename': file.filename,
                 'size': len(file_content),
                 'type': file.content_type,
-                'resume_info': resume_info
+                'resume_info': resume_info  # Make sure this is included
             })
         except Exception as e:
             print(f"Error processing file: {str(e)}")
-            response = jsonify(
-                {'error': f'Internal server error: {str(e)}'}), 500
+            response = jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
     # Add CORS headers to the response
-    response.headers.add('Access-Control-Allow-Origin',
-                         'https://portlink-omega.vercel.app')
+    response.headers.add('Access-Control-Allow-Origin', 'https://portlink-omega.vercel.app')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-
+    
     return response
