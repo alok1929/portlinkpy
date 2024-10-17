@@ -9,7 +9,7 @@ import re
 import json
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": ["https://portlink-omega.vercel.app", "http://localhost:3000"]}})
 
 # OpenAI setup
 client = OpenAI(
@@ -115,39 +115,49 @@ def extract_resume_info(text):
     except Exception as e:
         raise ValueError(f"Error in parsing OpenAI response: {str(e)}") from e
 
-
-@app.route('/api/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST', 'OPTIONS'])
 def upload_file():
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file part in the request'}), 400
+    if request.method == 'OPTIONS':
+        # Preflight request. Reply successfully:
+        response = app.make_default_options_response()
+    else:
+        # Actual request
+        try:
+            if 'file' not in request.files:
+                return jsonify({'error': 'No file part in the request'}), 400
 
-        file = request.files['file']
-        username = request.form.get('username')
-        filename = request.form.get('filename')
+            file = request.files['file']
+            username = request.form.get('username')
+            filename = request.form.get('filename')
 
-        if file.filename == '' or not username or not filename:
-            return jsonify({'error': 'Missing file, username, or filename'}), 400
+            if file.filename == '' or not username or not filename:
+                return jsonify({'error': 'Missing file, username, or filename'}), 400
 
-        # Process file here
-        file_content = file.read()
+            # Process file here
+            file_content = file.read()
+            
+            # Extract text from PDF
+            pdf_text = extract_text_from_pdf(BytesIO(file_content))
+            
+            # Extract resume information
+            resume_info = extract_resume_info(pdf_text)
 
-        # Extract text from PDF
-        pdf_text = extract_text_from_pdf(BytesIO(file_content))
+            response = jsonify({
+                'message': 'File uploaded and processed successfully!',
+                'username': username,
+                'filename': filename,
+                'original_filename': file.filename,
+                'size': len(file_content),
+                'type': file.content_type,
+                'resume_info': resume_info
+            })
+        except Exception as e:
+            print(f"Error processing file: {str(e)}")
+            response = jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
-        # Extract resume information
-        resume_info = extract_resume_info(pdf_text)
-
-        return jsonify({
-            'message': 'File uploaded and processed successfully!',
-            'username': username,
-            'filename': filename,
-            'original_filename': file.filename,
-            'size': len(file_content),
-            'type': file.content_type,
-            'resume_info': resume_info
-        })
-    except Exception as e:
-        print(f"Error processing file: {str(e)}")
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+    # Add CORS headers to the response
+    response.headers.add('Access-Control-Allow-Origin', 'https://portlink-omega.vercel.app')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
     
+    return response
