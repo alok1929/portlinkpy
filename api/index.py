@@ -21,14 +21,18 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 
 CORS(app, resources={
-    r"/api/*": {
-        "origins": ["https://portlink-omega.vercel.app", "http://localhost:3000"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
+    r"/*": {  # This will allow CORS for all routes
+        "origins": [
+            "https://portlink-omega.vercel.app",
+            "http://localhost:3000",
+            "https://*.vercel.app"  # This will allow all Vercel preview deployments
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
+        "supports_credentials": True,
         "max_age": 3600
     }
 })
-
 # OpenAI setup
 client = OpenAI(
     # This is the default and can be omitted
@@ -262,9 +266,28 @@ def not_found(error):
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    # Get the origin from the request headers
+    origin = request.headers.get('Origin')
+    allowed_origins = [
+        "https://portlink-omega.vercel.app",
+        "http://localhost:3000",
+        "https://*.vercel.app"
+    ]
+
+    # Check if the origin is allowed
+    if origin:
+        for allowed_origin in allowed_origins:
+            if allowed_origin.endswith('*.vercel.app'):
+                if origin.endswith('.vercel.app'):
+                    response.headers['Access-Control-Allow-Origin'] = origin
+                    break
+            elif origin == allowed_origin:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                break
+
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin'
     return response
 
 
@@ -273,11 +296,11 @@ def internal_error(error):
     return jsonify({"error": "Internal server error"}), 500
 
 
+app.route('/', methods=['OPTIONS'])
+
+
 def handle_preflight():
     response = jsonify({'message': 'Preflight request successful'})
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-    response.headers.add('Access-Control-Allow-Methods', 'POST')
     return response
 
 
