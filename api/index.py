@@ -3,20 +3,33 @@ from flask_cors import CORS
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import firebase_admin
+from firebase_admin import credentials, firestore
 from PyPDF2 import PdfReader
 from io import BytesIO
 import re
 import json
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["https://portlink-omega.vercel.app", "http://localhost:3000"]}})
+CORS(app, resources={
+     r"/api/*": {"origins": ["https://portlink-omega.vercel.app", "http://localhost:3000"]}})
 
 # OpenAI setup
 client = OpenAI(
     api_key=os.environ.get("OPENAI"),
 )
 
-print("openai client creat")
+
+print("openai client created")
+
+# Firebase setup
+cred_dict = json.loads(os.environ['FIREBASE_CONFIG'])
+cred = credentials.Certificate(cred_dict)
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+print("firebase client created")
+
 
 @app.route('/', methods=['GET'])
 def home():
@@ -115,6 +128,7 @@ def extract_resume_info(text):
     except Exception as e:
         raise ValueError(f"Error in parsing OpenAI response: {str(e)}") from e
 
+
 @app.route('/api/upload', methods=['POST', 'OPTIONS'])
 def upload_file():
     if request.method == 'OPTIONS':
@@ -133,17 +147,31 @@ def upload_file():
             if file.filename == '' or not username or not filename:
                 return jsonify({'error': 'Missing file, username, or filename'}), 400
 
+            # Verify file is a PDF
+            if not file.filename.lower().endswith('.pdf'):
+                return jsonify({'error': 'Only PDF files are allowed'}), 400
+
             # Process file here
             file_content = file.read()
-            
+
             # Extract text from PDF
             pdf_text = extract_text_from_pdf(BytesIO(file_content))
-            
+
             # Extract resume information
             resume_info = extract_resume_info(pdf_text)
 
+            # Save to Firestore
+            doc_ref = db.collection('users').document(username)
+            doc_ref.set({
+                'resumeInfo': resume_info,
+                'filename': filename,
+                'originalFilename': file.filename
+            })
+
+            print("uploaded to firestoredb successfully")
+
             response = jsonify({
-                'message': 'File uploaded and processed successfully!',
+                'message': 'File uploaded, processed, and saved to database successfully!',
                 'username': username,
                 'filename': filename,
                 'original_filename': file.filename,
@@ -153,11 +181,13 @@ def upload_file():
             })
         except Exception as e:
             print(f"Error processing file: {str(e)}")
-            response = jsonify({'error': f'Internal server error: {str(e)}'}), 500
+            response = jsonify(
+                {'error': f'Internal server error: {str(e)}'}), 500
 
     # Add CORS headers to the response
-    response.headers.add('Access-Control-Allow-Origin', 'https://portlink-omega.vercel.app')
+    response.headers.add('Access-Control-Allow-Origin',
+                         'https://portlink-omega.vercel.app')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    
+
     return response
