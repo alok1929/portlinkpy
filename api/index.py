@@ -225,7 +225,9 @@ def get_resume_info(username):
 @app.route('/api/create-vercel-project', methods=['POST'])
 def create_vercel_project():
     try:
-        data = request.json
+        data = request.get_json(force=True)
+        if data is None:
+            return jsonify({"error": "Invalid JSON payload"}), 400
         username = data.get('username')
 
         if not username:
@@ -236,7 +238,7 @@ def create_vercel_project():
             return jsonify({"error": "Server configuration error"}), 500
 
         project_name = f"{username}-resume"
-        
+
         # Create project configuration
         project_data: Dict[str, Any] = {
             "name": project_name,
@@ -263,7 +265,7 @@ def create_vercel_project():
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
             "Content-Type": "application/json"
         }
-        
+
         try:
             create_response = requests.post(
                 "https://api.vercel.com/v9/projects",
@@ -317,5 +319,6 @@ def create_vercel_project():
         }), 200
 
     except Exception as e:
-        logging.exception(f"Unexpected error in create_vercel_project: {str(e)}")
+        logging.exception(
+            f"Unexpected error in create_vercel_project: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
