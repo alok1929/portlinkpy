@@ -232,7 +232,6 @@ def create_vercel_project():
 
         username = data['username']
         project_name = f"{username}-resume"
-        github_repo = "https://github.com/alok1929/resume-template"
 
         headers = {
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
@@ -256,15 +255,10 @@ def create_vercel_project():
             # Project doesn't exist or error checking, proceed with creation
             pass
 
-        # Step 1: Create project with Git configuration
+        # Step 1: Create basic project first
         create_project_data = {
             "name": project_name,
-            "framework": "nextjs",
-            "gitRepository": {
-                "type": "github",
-                "repo": github_repo,
-                "private": False
-            }
+            "framework": "nextjs"
         }
 
         create_response = requests.post(
@@ -276,7 +270,7 @@ def create_vercel_project():
         project_info = create_response.json()
         project_id = project_info['id']
 
-        # Step 2: Deploy with environment variables
+        # Step 2: Create initial deployment from template
         deployment_data = {
             "name": project_name,
             "project_id": project_id,
@@ -288,13 +282,7 @@ def create_vercel_project():
                     "target": ["production", "preview", "development"],
                     "type": "plain"
                 }
-            ],
-            "gitSource": {
-                "type": "github",
-                "ref": "main",
-                "repo": github_repo,
-                "repoId": project_id
-            }
+            ]
         }
 
         deploy_response = requests.post(
@@ -303,13 +291,28 @@ def create_vercel_project():
             json=deployment_data
         )
         deploy_response.raise_for_status()
+        deployment_info = deploy_response.json()
 
         project_url = f"https://{project_name}.vercel.app"
 
+        # Return the deployment info and GitHub integration instructions
         return jsonify({
-            "message": "Vercel project created and deployed successfully",
+            "message": "Project created successfully. Please complete GitHub integration.",
             "url": project_url,
-            "project_id": project_id
+            "project_id": project_id,
+            "deployment_info": deployment_info,  # Return deployment info for debugging
+            "next_steps": {
+                "message": "To complete setup, please:",
+                "steps": [
+                    "1. Go to your Vercel dashboard",
+                    "2. Select the newly created project",
+                    "3. Click on 'Connect Git Repository'",
+                    f"4. Select the repository: alok1929/resume-template",
+                    "5. Complete the GitHub integration process"
+                ],
+                "vercel_dashboard": "https://vercel.com/dashboard",
+                "github_app": "https://github.com/apps/vercel"
+            }
         }), 200
 
     except requests.exceptions.RequestException as e:
