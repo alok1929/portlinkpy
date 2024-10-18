@@ -249,7 +249,6 @@ def create_vercel_project():
             }), 500
 
         GITHUB_REPO = os.environ.get('GITHUB_REPO')
-        print('github repo and updated token woo')
         if not GITHUB_REPO:
             logging.error("GitHub repo not configured")
             return jsonify({
@@ -278,10 +277,6 @@ def create_vercel_project():
             ]
         }
 
-        VERCEL_TEAM_ID = os.environ.get('VERCEL_TEAM_ID')
-        if VERCEL_TEAM_ID:
-            project_data["teamId"] = VERCEL_TEAM_ID
-
         # Headers for Vercel API
         headers = {
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
@@ -290,7 +285,8 @@ def create_vercel_project():
 
         # Log the project data and headers (remove sensitive info in production)
         logging.info(f"Project data: {json.dumps(project_data, indent=2)}")
-        logging.info(f"Headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
+        logging.info(
+            f"Headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
 
         # Send request to create the project
         create_response = requests.post(
@@ -313,9 +309,6 @@ def create_vercel_project():
             }
         }
 
-        if VERCEL_TEAM_ID:
-            deployment_data["teamId"] = VERCEL_TEAM_ID
-
         # Send request to deploy the project
         deploy_response = requests.post(
             "https://api.vercel.com/v13/deployments",
@@ -334,7 +327,8 @@ def create_vercel_project():
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Vercel API error: {str(e)}")
-        error_details = e.response.text if hasattr(e, 'response') and e.response is not None else str(e)
+        error_details = e.response.text if hasattr(
+            e, 'response') and e.response is not None else str(e)
         return jsonify({
             "error": "Vercel API error",
             "details": error_details
