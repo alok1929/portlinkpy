@@ -5,6 +5,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import logging
+import base64
 import firebase_admin
 from firebase_admin import credentials, firestore
 from PyPDF2 import PdfReader
@@ -232,38 +233,16 @@ def create_vercel_project():
 
         username = data['username']
         project_name = f"{username}-resume"
-        repo_url = "https://github.com/alok1929/resume-template"
 
         headers = {
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
             "Content-Type": "application/json"
         }
 
-        # First, check if project exists
-        try:
-            project_check = requests.get(
-                f"https://api.vercel.com/v9/projects/{project_name}",
-                headers=headers
-            )
-            if project_check.status_code == 200:
-                # Project exists, delete it first
-                delete_response = requests.delete(
-                    f"https://api.vercel.com/v9/projects/{project_name}",
-                    headers=headers
-                )
-                delete_response.raise_for_status()
-        except requests.exceptions.RequestException:
-            # Project doesn't exist or error checking, proceed with creation
-            pass
-
-        # Step 1: Create basic project first
+        # Step 1: Create basic project without GitHub integration
         create_project_data = {
             "name": project_name,
-            "framework": "nextjs",
-            "gitRepository": {
-                "type": "github",
-                "repo": repo_url
-            }
+            "framework": "nextjs"
         }
 
         create_response = requests.post(
@@ -275,21 +254,52 @@ def create_vercel_project():
         project_info = create_response.json()
         project_id = project_info['id']
 
-        # Get the repoId from the project_info
-        repo_id = project_info['gitRepository']['id']
+        # Step 2: Create initial deployment with files
+        # You'll need to prepare the necessary files for a basic Next.js project
+        files = {
+            'package.json': json.dumps({
+                "name": project_name,
+                "version": "1.0.0",
+                "private": True,
+                "scripts": {
+                    "dev": "next dev",
+                    "build": "next build",
+                    "start": "next start"
+                },
+                "dependencies": {
+                    "next": "latest",
+                    "react": "latest",
+                    "react-dom": "latest"
+                }
+            }),
+            'pages/index.js': f"""
+                export default function Home() {{
+                    return <h1>Welcome to {username}'s Resume</h1>
+                }}
+            """,
+            'next.config.js': """
+                module.exports = {
+                    reactStrictMode: true,
+                }
+            """
+        }
 
-        # Step 2: Create initial deployment
+        deployment_files = [
+            {
+                "file": file_name,
+                "data": base64.b64encode(content.encode()).decode()
+            } for file_name, content in files.items()
+        ]
+
         deployment_data = {
             "name": project_name,
             "target": "production",
-            "gitSource": {
-                "type": "github",
-                "repo": repo_url,
-                "ref": "main",  # or your default branch name
-                "repoId": repo_id
-            },
+            "files": deployment_files,
             "env": {
                 "NEXT_PUBLIC_RESUME_USERNAME": username
+            },
+            "projectSettings": {
+                "framework": "nextjs"
             }
         }
 
@@ -314,7 +324,8 @@ def create_vercel_project():
                 "steps": [
                     "1. Initial deployment may take a few minutes",
                     "2. You can check the status at the Vercel dashboard",
-                    f"3. Your site will be available at: {project_url}"
+                    f"3. Your site will be available at: {project_url}",
+                    "4. To enable GitHub integration, install the Vercel GitHub App: https://github.com/apps/vercel"
                 ],
                 "vercel_dashboard": "https://vercel.com/dashboard"
             }
