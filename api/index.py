@@ -232,36 +232,51 @@ def create_vercel_project():
 
         username = data['username']
         project_name = f"{username}-resume"
+        github_repo = "https://github.com/alok1929/resume-template"
 
         headers = {
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
             "Content-Type": "application/json"
         }
 
-        # Step 1: Create project
+        # First, check if project exists
+        try:
+            project_check = requests.get(
+                f"https://api.vercel.com/v9/projects/{project_name}",
+                headers=headers
+            )
+            if project_check.status_code == 200:
+                # Project exists, delete it first
+                delete_response = requests.delete(
+                    f"https://api.vercel.com/v9/projects/{project_name}",
+                    headers=headers
+                )
+                delete_response.raise_for_status()
+        except requests.exceptions.RequestException:
+            # Project doesn't exist or error checking, proceed with creation
+            pass
+
+        # Step 1: Create project with Git configuration
+        create_project_data = {
+            "name": project_name,
+            "framework": "nextjs",
+            "gitRepository": {
+                "type": "github",
+                "repo": github_repo,
+                "private": False
+            }
+        }
+
         create_response = requests.post(
             "https://api.vercel.com/v9/projects",
             headers=headers,
-            json={"name": project_name, "framework": "nextjs"}
+            json=create_project_data
         )
         create_response.raise_for_status()
         project_info = create_response.json()
         project_id = project_info['id']
 
-        # Step 2: Link GitHub repo to the project
-        repo_link_data = {
-            "type": "github",
-            "repo": GITHUB_REPO,
-            "production_branch": "main"
-        }
-        link_response = requests.post(
-            f"https://api.vercel.com/v9/projects/{project_id}/link",
-            headers=headers,
-            json=repo_link_data
-        )
-        link_response.raise_for_status()
-
-        # Step 3: Create deployment
+        # Step 2: Deploy with environment variables
         deployment_data = {
             "name": project_name,
             "project_id": project_id,
@@ -270,10 +285,18 @@ def create_vercel_project():
                 {
                     "key": "NEXT_PUBLIC_RESUME_USERNAME",
                     "value": username,
-                    "target": ["production", "preview", "development"]
+                    "target": ["production", "preview", "development"],
+                    "type": "plain"
                 }
-            ]
+            ],
+            "gitSource": {
+                "type": "github",
+                "ref": "main",
+                "repo": github_repo,
+                "repoId": project_id
+            }
         }
+
         deploy_response = requests.post(
             "https://api.vercel.com/v13/deployments",
             headers=headers,
@@ -284,7 +307,7 @@ def create_vercel_project():
         project_url = f"https://{project_name}.vercel.app"
 
         return jsonify({
-            "message": "Vercel project created, linked to GitHub, and deployed successfully",
+            "message": "Vercel project created and deployed successfully",
             "url": project_url,
             "project_id": project_id
         }), 200
