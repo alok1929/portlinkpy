@@ -283,7 +283,6 @@ def create_vercel_project():
 
         deployment_data = {
             "name": project_name,
-            "projectId": project_id,
             "target": "production",
             "files": [
                 {
