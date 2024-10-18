@@ -250,6 +250,7 @@ def create_vercel_project():
             }), 500
 
         GITHUB_REPO = os.environ.get('GITHUB_REPO')
+        print('github repo and updated token woo')
         if not GITHUB_REPO:
             logging.error("GitHub repo not configured")
             return jsonify({
