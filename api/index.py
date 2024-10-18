@@ -282,21 +282,19 @@ def create_vercel_project():
         })
 
         deployment_data = {
-            "name": project_name,
             "target": "production",
-            "files": [
-                {
-                    "file": "config.json",
-                    "data": config_json
-                }
-            ],
+            "gitSource": {
+                "type": "github",
+                "repo": "alok1929/resume-template",
+                "ref": "main"  # or your default branch name
+            },
             "env": {
                 "NEXT_PUBLIC_RESUME_USERNAME": username
             }
         }
 
         deploy_response = requests.post(
-            "https://api.vercel.com/v13/deployments",
+            f"https://api.vercel.com/v13/deployments",
             headers=headers,
             json=deployment_data
         )
