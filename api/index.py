@@ -1,14 +1,22 @@
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import logging
 import firebase_admin
 from firebase_admin import credentials, firestore
 from PyPDF2 import PdfReader
 from io import BytesIO
 import re
 import json
+import os
+from typing import Dict, Any
+
+# Add these environment variables
+VERCEL_API_TOKEN = os.environ.get('vtoken')
+VERCEL_TEAM_ID = os.environ.get('VERCEL_TEAM_ID')
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -18,6 +26,8 @@ CORS(app, resources={
 client = OpenAI(
     api_key=os.environ.get("OPENAI"),
 )
+
+GITHUB_REPO = "alok1929/resume-template"  # Replace with your actual GitHub username
 
 
 print("openai client creted")
@@ -153,10 +163,10 @@ def upload_file():
 
             # Process file here
             file_content = file.read()
-            
+
             # Extract text from PDF
             pdf_text = extract_text_from_pdf(BytesIO(file_content))
-            
+
             # Extract resume information
             resume_info = extract_resume_info(pdf_text)
 
@@ -179,11 +189,133 @@ def upload_file():
             })
         except Exception as e:
             print(f"Error processing file: {str(e)}")
-            response = jsonify({'error': f'Internal server error: {str(e)}'}), 500
+            response = jsonify(
+                {'error': f'Internal server error: {str(e)}'}), 500
 
     # Add CORS headers to the response
-    response.headers.add('Access-Control-Allow-Origin', 'https://portlink-omega.vercel.app')
+    response.headers.add('Access-Control-Allow-Origin',
+                         'https://portlink-omega.vercel.app')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    
+
     return response
+
+
+@app.route('/api/resume/<username>', methods=['GET'])
+def get_resume_info(username):
+    logging.debug(f"Received request: {request.method} {request.path}")
+
+    try:
+        # Retrieve the document reference from the Firestore 'users' collection
+        resume_ref = db.collection('users').document(username)
+        resume_data = resume_ref.get().to_dict()
+
+        # If resume data exists, return it with a 200 status code
+        if resume_data:
+            return jsonify({"extracted_info": resume_data}), 200
+        else:
+            return jsonify({"error": "Resume data not found"}), 404
+
+    except Exception as e:
+        # Log the error and return a 500 status code with error message
+        logging.error(f"Error in get_resume_info: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/create-vercel-project', methods=['POST'])
+def create_vercel_project():
+    try:
+        data = request.json
+        username = data.get('username')
+
+        if not username:
+            return jsonify({"error": "Username is required"}), 400
+
+        if not VERCEL_API_TOKEN:
+            return jsonify({"error": "Vercel API token not configured"}), 500
+
+        # First, check if the project already exists
+        project_name = f"{username}-resume"
+        
+        # Create project configuration
+        project_data: Dict[str, Any] = {
+            "name": project_name,
+            "framework": "nextjs",
+            "gitRepository": {
+                "type": "github",
+                "repo": GITHUB_REPO,
+            },
+            "buildCommand": "npm run build",
+            "installCommand": "npm install",
+            "environmentVariables": [
+                {
+                    "key": "NEXT_PUBLIC_RESUME_USERNAME",
+                    "value": username,
+                    "target": ["production", "preview", "development"]
+                }
+            ]
+        }
+
+        # Add optional team ID if present
+        if VERCEL_TEAM_ID:
+            project_data["teamId"] = VERCEL_TEAM_ID
+
+        # Create the project
+        headers = {
+            "Authorization": f"Bearer {VERCEL_API_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        create_response = requests.post(
+            "https://api.vercel.com/v9/projects",
+            headers=headers,
+            json=project_data
+        )
+
+        if create_response.status_code not in [200, 201]:
+            return jsonify({
+                "error": "Failed to create Vercel project",
+                "details": create_response.text
+            }), 500
+
+        project_info = create_response.json()
+
+        # Trigger a deployment
+        deployment_data = {
+            "name": project_name,
+            "target": "production",
+            "gitSource": {
+                "type": "github",
+                "repo": GITHUB_REPO,
+                "ref": "main"  # or whatever your default branch is
+            }
+        }
+
+        if VERCEL_TEAM_ID:
+            deployment_data["teamId"] = VERCEL_TEAM_ID
+
+        deploy_response = requests.post(
+            "https://api.vercel.com/v13/deployments",
+            headers=headers,
+            json=deployment_data
+        )
+
+        if deploy_response.status_code not in [200, 201]:
+            return jsonify({
+                "error": "Project created but deployment failed",
+                "details": deploy_response.text
+            }), 500
+
+        # Construct the project URL
+        project_url = f"https://{project_name}.vercel.app"
+
+        return jsonify({
+            "message": "Vercel project created and deployed successfully",
+            "url": project_url,
+            "project_id": project_info.get("id")
+        }), 200
+
+    except Exception as e:
+        logging.error(f"Error in create_vercel_project: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
