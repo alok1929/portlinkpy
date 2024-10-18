@@ -11,7 +11,7 @@ from PyPDF2 import PdfReader
 from io import BytesIO
 import re
 import json
-import os
+from requests.exceptions import RequestException
 from typing import Dict, Any
 
 # Add these environment variables
@@ -27,7 +27,7 @@ client = OpenAI(
     api_key=os.environ.get("OPENAI"),
 )
 
-GITHUB_REPO = "alok1929/resume-template"  # Replace with your actual GitHub username
+GITHUB_REPO = "https://github.com/alok1929/resume-template"
 
 
 print("openai client creted")
@@ -232,9 +232,9 @@ def create_vercel_project():
             return jsonify({"error": "Username is required"}), 400
 
         if not VERCEL_API_TOKEN:
-            return jsonify({"error": "Vercel API token not configured"}), 500
+            logging.error("Vercel API token not configured")
+            return jsonify({"error": "Server configuration error"}), 500
 
-        # First, check if the project already exists
         project_name = f"{username}-resume"
         
         # Create project configuration
@@ -256,26 +256,26 @@ def create_vercel_project():
             ]
         }
 
-        # Add optional team ID if present
         if VERCEL_TEAM_ID:
             project_data["teamId"] = VERCEL_TEAM_ID
 
-        # Create the project
         headers = {
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
             "Content-Type": "application/json"
         }
         
-        create_response = requests.post(
-            "https://api.vercel.com/v9/projects",
-            headers=headers,
-            json=project_data
-        )
-
-        if create_response.status_code not in [200, 201]:
+        try:
+            create_response = requests.post(
+                "https://api.vercel.com/v9/projects",
+                headers=headers,
+                json=project_data
+            )
+            create_response.raise_for_status()
+        except RequestException as e:
+            logging.error(f"Failed to create Vercel project: {str(e)}")
             return jsonify({
                 "error": "Failed to create Vercel project",
-                "details": create_response.text
+                "details": str(e)
             }), 500
 
         project_info = create_response.json()
@@ -287,26 +287,27 @@ def create_vercel_project():
             "gitSource": {
                 "type": "github",
                 "repo": GITHUB_REPO,
-                "ref": "main"  # or whatever your default branch is
+                "ref": "main"
             }
         }
 
         if VERCEL_TEAM_ID:
             deployment_data["teamId"] = VERCEL_TEAM_ID
 
-        deploy_response = requests.post(
-            "https://api.vercel.com/v13/deployments",
-            headers=headers,
-            json=deployment_data
-        )
-
-        if deploy_response.status_code not in [200, 201]:
+        try:
+            deploy_response = requests.post(
+                "https://api.vercel.com/v13/deployments",
+                headers=headers,
+                json=deployment_data
+            )
+            deploy_response.raise_for_status()
+        except RequestException as e:
+            logging.error(f"Project created but deployment failed: {str(e)}")
             return jsonify({
                 "error": "Project created but deployment failed",
-                "details": deploy_response.text
+                "details": str(e)
             }), 500
 
-        # Construct the project URL
         project_url = f"https://{project_name}.vercel.app"
 
         return jsonify({
@@ -316,6 +317,5 @@ def create_vercel_project():
         }), 200
 
     except Exception as e:
-        logging.error(f"Error in create_vercel_project: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-    
+        logging.exception(f"Unexpected error in create_vercel_project: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
