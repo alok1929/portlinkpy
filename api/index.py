@@ -228,86 +228,52 @@ def create_vercel_project():
         # Get JSON payload
         data = request.get_json(force=True)
         if not data or 'username' not in data:
-            return jsonify({
-                "error": "Missing data",
-                "details": "Username is required in the request body"
-            }), 400
+            return jsonify({"error": "Missing data", "details": "Username is required in the request body"}), 400
 
         username = data['username']
-
-        if not VERCEL_API_TOKEN:
-            logging.error("Vercel API token not configured")
-            return jsonify({
-                "error": "Server configuration error",
-                "details": "Vercel API token is missing"
-            }), 500
-
-        if not GITHUB_REPO:
-            logging.error("GitHub repo not configured")
-            return jsonify({
-                "error": "Server configuration error",
-                "details": "GitHub repo is missing"
-            }), 500
-
         project_name = f"{username}-resume"
 
-        # Headers for Vercel API
         headers = {
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
             "Content-Type": "application/json"
         }
 
-        # Create project
-        project_data = {
-            "name": project_name,
-            "framework": "nextjs",
-        }
-
+        # Step 1: Create project
         create_response = requests.post(
             "https://api.vercel.com/v9/projects",
             headers=headers,
-            json=project_data
+            json={"name": project_name, "framework": "nextjs"}
         )
         create_response.raise_for_status()
         project_info = create_response.json()
+        project_id = project_info['id']
 
-        # Fetch repoId
-        repo_response = requests.get(
-            f"https://api.vercel.com/v1/projects/{project_info['id']}/repos",
-            headers=headers
+        # Step 2: Link GitHub repo to the project
+        repo_link_data = {
+            "type": "github",
+            "repo": GITHUB_REPO,
+            "production_branch": "main"
+        }
+        link_response = requests.post(
+            f"https://api.vercel.com/v9/projects/{project_id}/link",
+            headers=headers,
+            json=repo_link_data
         )
-        repo_response.raise_for_status()
-        repos = repo_response.json()['repos']
-        repo_id = next((repo['id'] for repo in repos if repo['url']
-                       == f"https://github.com/{GITHUB_REPO}"), None)
+        link_response.raise_for_status()
 
-        if not repo_id:
-            return jsonify({
-                "error": "Repository not found",
-                "details": f"The repository {GITHUB_REPO} was not found in your Vercel account. Make sure it's connected."
-            }), 400
-
-        # Deploy from GitHub
+        # Step 3: Create deployment
         deployment_data = {
             "name": project_name,
-            "gitSource": {
-                "type": "github",
-                "repo": GITHUB_REPO,
-                "ref": "main",
-                "repoId": repo_id
-            },
-            "projectId": project_info['id'],
+            "project_id": project_id,
             "target": "production",
             "env": [
                 {
                     "key": "NEXT_PUBLIC_RESUME_USERNAME",
                     "value": username,
-                    "type": "plain",
                     "target": ["production", "preview", "development"]
                 }
             ]
         }
-
         deploy_response = requests.post(
             "https://api.vercel.com/v13/deployments",
             headers=headers,
@@ -318,32 +284,17 @@ def create_vercel_project():
         project_url = f"https://{project_name}.vercel.app"
 
         return jsonify({
-            "message": "Vercel project created and deployed successfully",
+            "message": "Vercel project created, linked to GitHub, and deployed successfully",
             "url": project_url,
-            "project_id": project_info['id']
+            "project_id": project_id
         }), 200
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Vercel API error: {str(e)}")
         error_details = e.response.text if hasattr(
             e, 'response') and e.response is not None else str(e)
-
-        if "To link a GitHub repository, you need to install the GitHub integration first" in error_details:
-            return jsonify({
-                "error": "GitHub Integration Required",
-                "details": "The Vercel GitHub App needs to be installed and configured.",
-                "action": "Install GitHub App",
-                "link": "https://github.com/apps/vercel"
-            }), 400
-
-        return jsonify({
-            "error": "Vercel API error",
-            "details": error_details
-        }), 500
+        return jsonify({"error": "Vercel API error", "details": error_details}), 500
 
     except Exception as e:
         logging.exception(f"Unexpected error: {str(e)}")
-        return jsonify({
-            "error": "An unexpected error occurred",
-            "details": str(e)
-        }), 500
+        return jsonify({"error": "An unexpected error occurred", "details": str(e)}), 500
