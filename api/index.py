@@ -290,14 +290,13 @@ def create_vercel_project():
                     "data": config_json
                 }
             ],
-            "env": [
-                {
-                    "key": "NEXT_PUBLIC_RESUME_USERNAME",
+            "env": {
+                "NEXT_PUBLIC_RESUME_USERNAME": {
                     "value": username,
                     "target": ["production", "preview", "development"],
                     "type": "plain"
                 }
-            ]
+            }
         }
 
         deploy_response = requests.post(
