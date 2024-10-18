@@ -222,7 +222,6 @@ def get_resume_info(username):
         return jsonify({"error": str(e)}), 500
 
 
-
 @app.route('/api/create-vercel-project', methods=['POST'])
 def create_vercel_project():
     try:
@@ -289,6 +288,10 @@ def create_vercel_project():
             "Content-Type": "application/json"
         }
 
+        # Log the project data and headers (remove sensitive info in production)
+        logging.info(f"Project data: {json.dumps(project_data, indent=2)}")
+        logging.info(f"Headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
+
         # Send request to create the project
         create_response = requests.post(
             "https://api.vercel.com/v9/projects",
@@ -331,9 +334,10 @@ def create_vercel_project():
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Vercel API error: {str(e)}")
+        error_details = e.response.text if hasattr(e, 'response') and e.response is not None else str(e)
         return jsonify({
             "error": "Vercel API error",
-            "details": str(e)
+            "details": error_details
         }), 500
 
     except Exception as e:
