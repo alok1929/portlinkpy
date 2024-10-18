@@ -272,6 +272,7 @@ def create_vercel_project():
                 {
                     "key": "NEXT_PUBLIC_RESUME_USERNAME",
                     "value": username,
+                    "type": "plain",
                     "target": ["production", "preview", "development"]
                 }
             ]
@@ -285,8 +286,7 @@ def create_vercel_project():
 
         # Log the project data and headers (remove sensitive info in production)
         logging.info(f"Project data: {json.dumps(project_data, indent=2)}")
-        logging.info(
-            f"Headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
+        logging.info(f"Headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
 
         # Send request to create the project
         create_response = requests.post(
@@ -327,8 +327,7 @@ def create_vercel_project():
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Vercel API error: {str(e)}")
-        error_details = e.response.text if hasattr(
-            e, 'response') and e.response is not None else str(e)
+        error_details = e.response.text if hasattr(e, 'response') and e.response is not None else str(e)
         return jsonify({
             "error": "Vercel API error",
             "details": error_details
