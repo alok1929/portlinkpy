@@ -291,11 +291,7 @@ def create_vercel_project():
                 }
             ],
             "env": {
-                "NEXT_PUBLIC_RESUME_USERNAME": {
-                    "value": username,
-                    "target": ["production", "preview", "development"],
-                    "type": "plain"
-                }
+                "NEXT_PUBLIC_RESUME_USERNAME": username
             }
         }
 
