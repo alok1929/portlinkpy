@@ -233,6 +233,7 @@ def create_vercel_project():
         if not username:
             return jsonify({"error": "Username is required"}), 400
 
+        VERCEL_API_TOKEN = os.environ.get('vtoken')
         if not VERCEL_API_TOKEN:
             logging.error("Vercel API token not configured")
             return jsonify({"error": "Server configuration error"}), 500
@@ -240,7 +241,7 @@ def create_vercel_project():
         project_name = f"{username}-resume"
 
         # Create project configuration
-        project_data: Dict[str, Any] = {
+        project_data = {
             "name": project_name,
             "framework": "nextjs",
             "gitRepository": {
@@ -273,11 +274,12 @@ def create_vercel_project():
                 json=project_data
             )
             create_response.raise_for_status()
-        except RequestException as e:
+        except requests.exceptions.RequestException as e:
             logging.error(f"Failed to create Vercel project: {str(e)}")
             return jsonify({
                 "error": "Failed to create Vercel project",
-                "details": str(e)
+                "details": str(e),
+                "response": create_response.text if hasattr(create_response, 'text') else None
             }), 500
 
         project_info = create_response.json()
@@ -303,11 +305,12 @@ def create_vercel_project():
                 json=deployment_data
             )
             deploy_response.raise_for_status()
-        except RequestException as e:
+        except requests.exceptions.RequestException as e:
             logging.error(f"Project created but deployment failed: {str(e)}")
             return jsonify({
                 "error": "Project created but deployment failed",
-                "details": str(e)
+                "details": str(e),
+                "response": deploy_response.text if hasattr(deploy_response, 'text') else None
             }), 500
 
         project_url = f"https://{project_name}.vercel.app"
@@ -319,6 +322,5 @@ def create_vercel_project():
         }), 200
 
     except Exception as e:
-        logging.exception(
-            f"Unexpected error in create_vercel_project: {str(e)}")
+        logging.exception(f"Unexpected error in create_vercel_project: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
