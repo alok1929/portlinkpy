@@ -273,8 +273,18 @@ def create_vercel_project():
         # Step 2: Create initial deployment from template
         deployment_data = {
             "name": project_name,
-            "project_id": project_id,
+            "projectId": project_id,
             "target": "production",
+            "files": [
+                {
+                    "file": "config.json",
+                    "data": {
+                        "username": username,
+                        "buildCommand": "next build",
+                        "outputDirectory": ".next"
+                    }
+                }
+            ],
             "env": [
                 {
                     "key": "NEXT_PUBLIC_RESUME_USERNAME",
@@ -300,14 +310,14 @@ def create_vercel_project():
             "message": "Project created successfully. Please complete GitHub integration.",
             "url": project_url,
             "project_id": project_id,
-            "deployment_info": deployment_info,  # Return deployment info for debugging
+            "deployment_info": deployment_info,
             "next_steps": {
                 "message": "To complete setup, please:",
                 "steps": [
                     "1. Go to your Vercel dashboard",
                     "2. Select the newly created project",
                     "3. Click on 'Connect Git Repository'",
-                    f"4. Select the repository: alok1929/resume-template",
+                    f"4. Select the repository: {GITHUB_REPO}",
                     "5. Complete the GitHub integration process"
                 ],
                 "vercel_dashboard": "https://vercel.com/dashboard",
