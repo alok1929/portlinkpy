@@ -258,7 +258,11 @@ def create_vercel_project():
         # Step 1: Create basic project first
         create_project_data = {
             "name": project_name,
-            "framework": "nextjs"
+            "framework": "nextjs",
+            "gitRepository": {
+                "type": "github",
+                "repo": "alok1929/resume-template"
+            }
         }
 
         create_response = requests.post(
@@ -270,7 +274,13 @@ def create_vercel_project():
         project_info = create_response.json()
         project_id = project_info['id']
 
-        # Step 2: Create initial deployment from template
+        # Step 2: Create initial deployment
+        config_json = json.dumps({
+            "username": username,
+            "buildCommand": "next build",
+            "outputDirectory": ".next"
+        })
+
         deployment_data = {
             "name": project_name,
             "projectId": project_id,
@@ -278,11 +288,7 @@ def create_vercel_project():
             "files": [
                 {
                     "file": "config.json",
-                    "data": {
-                        "username": username,
-                        "buildCommand": "next build",
-                        "outputDirectory": ".next"
-                    }
+                    "data": config_json
                 }
             ],
             "env": [
@@ -305,23 +311,20 @@ def create_vercel_project():
 
         project_url = f"https://{project_name}.vercel.app"
 
-        # Return the deployment info and GitHub integration instructions
+        # Return success response
         return jsonify({
-            "message": "Project created successfully. Please complete GitHub integration.",
+            "message": "Project created successfully!",
             "url": project_url,
             "project_id": project_id,
             "deployment_info": deployment_info,
             "next_steps": {
-                "message": "To complete setup, please:",
+                "message": "Your deployment is being processed. Please note:",
                 "steps": [
-                    "1. Go to your Vercel dashboard",
-                    "2. Select the newly created project",
-                    "3. Click on 'Connect Git Repository'",
-                    f"4. Select the repository: {GITHUB_REPO}",
-                    "5. Complete the GitHub integration process"
+                    "1. Initial deployment may take a few minutes",
+                    "2. You can check the status at the Vercel dashboard",
+                    f"3. Your site will be available at: {project_url}"
                 ],
-                "vercel_dashboard": "https://vercel.com/dashboard",
-                "github_app": "https://github.com/apps/vercel"
+                "vercel_dashboard": "https://vercel.com/dashboard"
             }
         }), 200
 
