@@ -255,9 +255,9 @@ def create_vercel_project():
         project_id = project_info['id']
 
         # Step 2: Create initial deployment with files
-        # You'll need to prepare the necessary files for a basic Next.js project
+        # Prepare the necessary files for a basic Next.js project
         files = {
-            'package.json': json.dumps({
+            'package.json': {
                 "name": project_name,
                 "version": "1.0.0",
                 "private": True,
@@ -271,15 +271,54 @@ def create_vercel_project():
                     "react": "latest",
                     "react-dom": "latest"
                 }
-            }),
-            'pages/index.js': f"""
+            },
+            'src/app/page.tsx': """ 
+                import { NextPage } from 'next';
+                import Head from 'next/head';
+                import Image from 'next/image';
+
+                const Home: NextPage = () => {
+                  return (
+                    <div>
+                      <Head>
+                        <title>My Resume</title>
+                        <meta name="description" content="My Resume" />
+                      </Head>
+                      <main>
+                        <h1>Welcome to {username}'s Resume</h1>
+                        <Image src="/logo.png" alt="Logo" width={500} height={500} />
+                      </main>
+                    </div>
+                  );
+                };
+
+                export default Home;
+            """,
+            'src/app/layout.tsx': """ 
+                import { ReactNode } from 'react';
+                import Head from 'next/head';
+
+                interface LayoutProps {
+                  children: ReactNode;
+                }
+
+                const Layout = ({ children }: LayoutProps) => {
+                  return (
+                    <div>
+                      <Head>
+                        <title>My Resume</title>
+                        <meta name="description" content="My Resume" />
+                      </Head>
+                      <main>{children}</main>
+                    </div>
+                  );
                 export default function Home() {{
                     return <h1>Welcome to {username}'s Resume</h1>
                 }}
             """,
             'next.config.js': """
                 module.exports = {
-                    reactStrictMode: true,
+                  reactStrictMode: true,
                 }
             """
         }
@@ -287,7 +326,7 @@ def create_vercel_project():
         deployment_files = [
             {
                 "file": file_name,
-                "data": base64.b64encode(content.encode()).decode()
+                "data": json.dumps(content) if isinstance(content, dict) else content
             } for file_name, content in files.items()
         ]
 
