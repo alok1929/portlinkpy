@@ -232,6 +232,7 @@ def create_vercel_project():
 
         username = data['username']
         project_name = f"{username}-resume"
+        repo_url = "https://github.com/alok1929/resume-template"
 
         headers = {
             "Authorization": f"Bearer {VERCEL_API_TOKEN}",
@@ -261,7 +262,7 @@ def create_vercel_project():
             "framework": "nextjs",
             "gitRepository": {
                 "type": "github",
-                "repo": "alok1929/resume-template"
+                "repo": repo_url
             }
         }
 
@@ -274,19 +275,18 @@ def create_vercel_project():
         project_info = create_response.json()
         project_id = project_info['id']
 
-        # Step 2: Create initial deployment
-        config_json = json.dumps({
-            "username": username,
-            "buildCommand": "next build",
-            "outputDirectory": ".next"
-        })
+        # Get the repoId from the project_info
+        repo_id = project_info['gitRepository']['id']
 
+        # Step 2: Create initial deployment
         deployment_data = {
+            "name": project_name,
             "target": "production",
             "gitSource": {
                 "type": "github",
-                "repo": "alok1929/resume-template",
-                "ref": "main"  # or your default branch name
+                "repo": repo_url,
+                "ref": "main",  # or your default branch name
+                "repoId": repo_id
             },
             "env": {
                 "NEXT_PUBLIC_RESUME_USERNAME": username
@@ -294,7 +294,7 @@ def create_vercel_project():
         }
 
         deploy_response = requests.post(
-            f"https://api.vercel.com/v13/deployments",
+            "https://api.vercel.com/v13/deployments",
             headers=headers,
             json=deployment_data
         )
