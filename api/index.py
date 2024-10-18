@@ -271,17 +271,34 @@ def create_vercel_project():
         create_response.raise_for_status()
         project_info = create_response.json()
 
+        # Fetch repoId
+        repo_response = requests.get(
+            f"https://api.vercel.com/v1/projects/{project_info['id']}/repos",
+            headers=headers
+        )
+        repo_response.raise_for_status()
+        repos = repo_response.json()['repos']
+        repo_id = next((repo['id'] for repo in repos if repo['url']
+                       == f"https://github.com/{GITHUB_REPO}"), None)
+
+        if not repo_id:
+            return jsonify({
+                "error": "Repository not found",
+                "details": f"The repository {GITHUB_REPO} was not found in your Vercel account. Make sure it's connected."
+            }), 400
+
         # Deploy from GitHub
         deployment_data = {
             "name": project_name,
             "gitSource": {
                 "type": "github",
                 "repo": GITHUB_REPO,
-                "ref": "main"
+                "ref": "main",
+                "repoId": repo_id
             },
             "projectId": project_info['id'],
             "target": "production",
-            "envVars": [
+            "env": [
                 {
                     "key": "NEXT_PUBLIC_RESUME_USERNAME",
                     "value": username,
