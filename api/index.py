@@ -272,220 +272,147 @@ def create_vercel_project():
                     "react-dom": "latest"
                 }
             },
-            'src/app/page.tsx': """ 
-'use client'
+            'src/app/page.tsx':
+            """ 
+                'use client';
 
-import { useEffect, useState } from 'react'
-import { Mail, GitHub, Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
+                import { useEffect, useState } from 'react'
+                import { Mail, GitHub, Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
 
-interface ResumeInfo {
-  Name: string
-  Email: string
-  GitHub: string
-  LinkedIn: string
-  Education: string[]
-  "Professional Experience": Array<{
-    Role: string
-    Duration: string
-    Description: string
-  }>
-  Projects: Array<{
-    Name: string
-    Description: string
-    Technologies: string[]
-  }>
-  Skills: string[]
-  "Questions and Answers": Array<{
-    Question: string
-    Answer: string
-  }>
-}
+                interface ResumeInfo {
+                  Name: string
+                  Email: string
+                  GitHub: string
+                  LinkedIn: string
+                  Education: string[]
+                  "Professional Experience": Array<{
+                    Role: string
+                    Duration: string
+                    Description: string
+                  }>
+                  Projects: Array<{
+                    Name: string
+                    Description: string
+                    Technologies: string[]
+                  }>
+                  Skills: string[]
+                  "Questions and Answers": Array<{
+                    Question: string
+                    Answer: string
+                  }>
+                }
 
-export default function PortfolioResume() {
-  const [resumeInfo, setResumeInfo] = useState<ResumeInfo | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+                export default function PortfolioResume() {
+                  const [resumeInfo, setResumeInfo] = useState<ResumeInfo | null>(null)
+                  const [loading, setLoading] = useState(true)
+                  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchResumeData = async () => {
-      try {
-        const username = process.env.NEXT_PUBLIC_RESUME_USERNAME
-        if (!username) {
-          throw new Error('Username not configured')
-        }
+                  useEffect(() => {
+                    const fetchResumeData = async () => {
+                      try {
+                        const username = process.env.NEXT_PUBLIC_RESUME_USERNAME
+                        if (!username) {
+                          throw new Error('Username not configured')
+                        }
 
-        const response = await fetch(`https://portlinkpy.vercel.app/api/resume/${username}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch resume data')
-        }
+                        const response = await fetch(`https://portlinkpy.vercel.app/api/resume/${username}`)
+                        if (!response.ok) {
+                          throw new Error('Failed to fetch resume data')
+                        }
 
-        const data = await response.json()
-        setResumeInfo(data.extracted_info.resumeInfo)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load resume')
-      } finally {
-        setLoading(false)
-      }
-    }
+                        const data = await response.json()
+                        setResumeInfo(data.extracted_info.resumeInfo)
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Failed to load resume')
+                      } finally {
+                        setLoading(false)
+                      }
+                    }
 
-    fetchResumeData()
-  }, [])
+                    fetchResumeData()
+                  }, [])
 
-  if (loading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>
-  }
+                  if (loading) {
+                    return <div className="flex justify-center items-center min-h-screen">Loading...</div>
+                  }
 
-  if (error) {
-    return <div className="flex justify-center items-center min-h-screen text-red-500">{error}</div>
-  }
+                  if (error) {
+                    return <div className="flex justify-center items-center min-h-screen text-red-500">{error}</div>
+                  }
 
-  if (!resumeInfo) {
-    return <div className="flex justify-center items-center min-h-screen">No resume data found</div>
-  }
+                  if (!resumeInfo) {
+                    return <div className="flex justify-center items-center min-h-screen">No resume data found</div>
+                  }
 
-  return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="container mx-auto px-4 py-8">
-        <div className="lg:flex lg:space-x-8">
-          {/* Sidebar */}
-          <aside className="lg:w-1/3 mb-8 lg:mb-0">
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-3xl font-bold text-center">{resumeInfo.Name}</h2>
-              <div className="mt-4">
-                <a href={`mailto:${resumeInfo.Email}`} className="block text-center bg-gray-100 p-2 rounded-lg my-2">
-                  <Mail className="inline w-4 h-4 mr-2" />
-                  {resumeInfo.Email}
-                </a>
-                {resumeInfo.GitHub && (
-                  <a href={resumeInfo.GitHub} target="_blank" rel="noopener noreferrer" className="block text-center bg-gray-100 p-2 rounded-lg my-2">
-                    <GitHub className="inline w-4 h-4 mr-2" />
-                    GitHub
-                  </a>
-                )}
-                {resumeInfo.LinkedIn && (
-                  <a href={resumeInfo.LinkedIn} target="_blank" rel="noopener noreferrer" className="block text-center bg-gray-100 p-2 rounded-lg my-2">
-                    <Linkedin className="inline w-4 h-4 mr-2" />
-                    LinkedIn
-                  </a>
-                )}
-              </div>
-              <hr className="my-6" />
-              <h3 className="text-xl font-semibold mb-2 flex items-center">
-                <Star className="w-5 h-5 mr-2" />
-                Skills
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {resumeInfo.Skills.map((skill, index) => (
-                  <span key={index} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-lg">{skill}</span>
-                ))}
-              </div>
-              <hr className="my-6" />
-              <h3 className="text-xl font-semibold mb-2 flex items-center">
-                <Book className="w-5 h-5 mr-2" />
-                Education
-              </h3>
-              <ul className="list-disc ml-5 space-y-2">
-                {resumeInfo.Education.map((edu, index) => (
-                  <li key={index} className="text-gray-600">{edu}</li>
-                ))}
-              </ul>
-            </div>
-          </aside>
-
-          {/* Main Content */}
-          <main className="lg:w-2/3 space-y-8">
-            {/* Professional Experience Section */}
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-2xl font-bold flex items-center">
-                <Briefcase className="w-6 h-6 mr-2" />
-                Professional Experience
-              </h2>
-              <div className="mt-4 space-y-4">
-                {resumeInfo["Professional Experience"].map((exp, index) => (
-                  <div key={index}>
-                    <h3 className="text-xl font-semibold">{exp.Role}</h3>
-                    <p className="text-gray-600">{exp.Duration}</p>
-                    <p>{exp.Description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Projects Section */}
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-2xl font-bold flex items-center">
-                <Code className="w-6 h-6 mr-2" />
-                Projects
-              </h2>
-              <div className="mt-4 space-y-4">
-                {resumeInfo.Projects.map((project, index) => (
-                  <div key={index}>
-                    <h3 className="text-xl font-semibold">{project.Name}</h3>
-                    <p>{project.Description}</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {project.Technologies.map((tech, techIndex) => (
-                        <span key={techIndex} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-lg">{tech}</span>
-                      ))}
+                  return (
+                    <div className="bg-gray-50 min-h-screen">
+                      <div className="container mx-auto px-4 py-8">
+                        <div className="lg:flex lg:space-x-8">
+                          {/* Sidebar */}
+                          <aside className="lg:w-1/3 mb-8 lg:mb-0">
+                            <div className="bg-white shadow-md rounded-lg p-6">
+                              <h2 className="text-3xl font-bold text-center">{resumeInfo.Name}</h2>
+                              <div className="mt-4">
+                                <a href={`mailto:${resumeInfo.Email}`} className="block text-center bg-gray-100 p-2 rounded-lg my-2">
+                                  <Mail className="inline w-4 h-4 mr-2" />
+                                  {resumeInfo.Email}
+                                </a>
+                                {resumeInfo.GitHub && (
+                                  <a href={resumeInfo.GitHub} target="_blank" rel="noopener noreferrer" className="block text-center bg-gray-100 p-2 rounded-lg my-2">
+                                    <GitHub className="inline w-4 h-4 mr-2" />
+                                    GitHub
+                                  </a>
+                                )}
+                                {resumeInfo.LinkedIn && (
+                                  <a href={resumeInfo.LinkedIn} target="_blank" rel="noopener noreferrer" className="block text-center bg-gray-100 p-2 rounded-lg my-2">
+                                    <Linkedin className="inline w-4 h-4 mr-2" />
+                                    LinkedIn
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </aside>
+                          </main>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Q&A Section */}
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h2 className="text-2xl font-bold">Questions & Answers</h2>
-              <div className="mt-4 space-y-4">
-                {resumeInfo["Questions and Answers"].map((qa, index) => (
-                  <div key={index}>
-                    <h3 className="text-xl font-semibold mb-2">Q: {qa.Question}</h3>
-                    <p>A: {qa.Answer}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>
-    </div>
-  )
-}
-
+                  )
+                }
             """,
             'src/app/layout.tsx': """ 
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
+                import type { Metadata } from "next";
+                import localFont from "next/font/local";
+                import "./globals.css";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+                const geistSans = localFont({
+                  src: "./fonts/GeistVF.woff",
+                  variable: "--font-geist-sans",
+                  weight: "100 900",
+                });
+                const geistMono = localFont({
+                  src: "./fonts/GeistMonoVF.woff",
+                  variable: "--font-geist-mono",
+                  weight: "100 900",
+                });
 
-export const metadata: Metadata = {
-  title: "Create Next App",
-  description: "Generated by create next app",
-};
+                export const metadata: Metadata = {
+                  title: "Create Next App",
+                  description: "Generated by create next app",
+                };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
-        {children}
-      </body>
-    </html>
-  );
-}
+                export default function RootLayout({
+                  children,
+                }: {
+                  children: React.ReactNode;
+                }) {
+                  return (
+                    <html lang="en">
+                      <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
+                        {children}
+                      </body>
+                    </html>
+                  );
+                }
             """,
         }
 
