@@ -273,109 +273,241 @@ def create_vercel_project():
                 }
             },
             'src/app/page.tsx': """ 
-                import { NextPage } from 'next';
-                import Head from 'next/head';
-                import Image from 'next/image';
+'use client'
 
-                const Home: NextPage = () => {
-                  return (
-                    <div>
-                      <Head>
-                        <title>My Resume</title>
-                        <meta name="description" content="My Resume" />
-                      </Head>
-                      <main>
-                        <h1>Welcome to {username}'s Resume</h1>
-                        <Image src="/logo.png" alt="Logo" width={500} height={500} />
-                      </main>
+import { useEffect, useState } from 'react'
+import { Mail, GitHub, Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
+
+interface ResumeInfo {
+  Name: string
+  Email: string
+  GitHub: string
+  LinkedIn: string
+  Education: string[]
+  "Professional Experience": Array<{
+    Role: string
+    Duration: string
+    Description: string
+  }>
+  Projects: Array<{
+    Name: string
+    Description: string
+    Technologies: string[]
+  }>
+  Skills: string[]
+  "Questions and Answers": Array<{
+    Question: string
+    Answer: string
+  }>
+}
+
+export default function PortfolioResume() {
+  const [resumeInfo, setResumeInfo] = useState<ResumeInfo | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchResumeData = async () => {
+      try {
+        const username = process.env.NEXT_PUBLIC_RESUME_USERNAME
+        if (!username) {
+          throw new Error('Username not configured')
+        }
+
+        const response = await fetch(`https://portlinkpy.vercel.app/api/resume/${username}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch resume data')
+        }
+
+        const data = await response.json()
+        setResumeInfo(data.extracted_info.resumeInfo)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load resume')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchResumeData()
+  }, [])
+
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center min-h-screen text-red-500">{error}</div>
+  }
+
+  if (!resumeInfo) {
+    return <div className="flex justify-center items-center min-h-screen">No resume data found</div>
+  }
+
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <div className="container mx-auto px-4 py-8">
+        <div className="lg:flex lg:space-x-8">
+          {/* Sidebar */}
+          <aside className="lg:w-1/3 mb-8 lg:mb-0">
+            <div className="bg-white shadow-md rounded-lg p-6">
+              <h2 className="text-3xl font-bold text-center">{resumeInfo.Name}</h2>
+              <div className="mt-4">
+                <a href={`mailto:${resumeInfo.Email}`} className="block text-center bg-gray-100 p-2 rounded-lg my-2">
+                  <Mail className="inline w-4 h-4 mr-2" />
+                  {resumeInfo.Email}
+                </a>
+                {resumeInfo.GitHub && (
+                  <a href={resumeInfo.GitHub} target="_blank" rel="noopener noreferrer" className="block text-center bg-gray-100 p-2 rounded-lg my-2">
+                    <GitHub className="inline w-4 h-4 mr-2" />
+                    GitHub
+                  </a>
+                )}
+                {resumeInfo.LinkedIn && (
+                  <a href={resumeInfo.LinkedIn} target="_blank" rel="noopener noreferrer" className="block text-center bg-gray-100 p-2 rounded-lg my-2">
+                    <Linkedin className="inline w-4 h-4 mr-2" />
+                    LinkedIn
+                  </a>
+                )}
+              </div>
+              <hr className="my-6" />
+              <h3 className="text-xl font-semibold mb-2 flex items-center">
+                <Star className="w-5 h-5 mr-2" />
+                Skills
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {resumeInfo.Skills.map((skill, index) => (
+                  <span key={index} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-lg">{skill}</span>
+                ))}
+              </div>
+              <hr className="my-6" />
+              <h3 className="text-xl font-semibold mb-2 flex items-center">
+                <Book className="w-5 h-5 mr-2" />
+                Education
+              </h3>
+              <ul className="list-disc ml-5 space-y-2">
+                {resumeInfo.Education.map((edu, index) => (
+                  <li key={index} className="text-gray-600">{edu}</li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="lg:w-2/3 space-y-8">
+            {/* Professional Experience Section */}
+            <div className="bg-white shadow-md rounded-lg p-6">
+              <h2 className="text-2xl font-bold flex items-center">
+                <Briefcase className="w-6 h-6 mr-2" />
+                Professional Experience
+              </h2>
+              <div className="mt-4 space-y-4">
+                {resumeInfo["Professional Experience"].map((exp, index) => (
+                  <div key={index}>
+                    <h3 className="text-xl font-semibold">{exp.Role}</h3>
+                    <p className="text-gray-600">{exp.Duration}</p>
+                    <p>{exp.Description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Projects Section */}
+            <div className="bg-white shadow-md rounded-lg p-6">
+              <h2 className="text-2xl font-bold flex items-center">
+                <Code className="w-6 h-6 mr-2" />
+                Projects
+              </h2>
+              <div className="mt-4 space-y-4">
+                {resumeInfo.Projects.map((project, index) => (
+                  <div key={index}>
+                    <h3 className="text-xl font-semibold">{project.Name}</h3>
+                    <p>{project.Description}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {project.Technologies.map((tech, techIndex) => (
+                        <span key={techIndex} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-lg">{tech}</span>
+                      ))}
                     </div>
-                  );
-                };
+                  </div>
+                ))}
+              </div>
+            </div>
 
-                export default Home;
+            {/* Q&A Section */}
+            <div className="bg-white shadow-md rounded-lg p-6">
+              <h2 className="text-2xl font-bold">Questions & Answers</h2>
+              <div className="mt-4 space-y-4">
+                {resumeInfo["Questions and Answers"].map((qa, index) => (
+                  <div key={index}>
+                    <h3 className="text-xl font-semibold mb-2">Q: {qa.Question}</h3>
+                    <p>A: {qa.Answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  )
+}
+
             """,
             'src/app/layout.tsx': """ 
-                import { ReactNode } from 'react';
-                import Head from 'next/head';
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
 
-                interface LayoutProps {
-                  children: ReactNode;
-                }
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
 
-                const Layout = ({ children }: LayoutProps) => {
-                  return (
-                    <div>
-                      <Head>
-                        <title>My Resume</title>
-                        <meta name="description" content="My Resume" />
-                      </Head>
-                      <main>{children}</main>
-                    </div>
-                  );
-                export default function Home() {{
-                    return <h1>Welcome to {username}'s Resume</h1>
-                }}
+export const metadata: Metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
+        {children}
+      </body>
+    </html>
+  );
+}
             """,
-            'next.config.js': """
-                module.exports = {
-                  reactStrictMode: true,
-                }
-            """
         }
-
-        deployment_files = [
-            {
-                "file": file_name,
-                "data": json.dumps(content) if isinstance(content, dict) else content
-            } for file_name, content in files.items()
-        ]
 
         deployment_data = {
-            "name": project_name,
-            "target": "production",
-            "files": deployment_files,
-            "env": {
-                "NEXT_PUBLIC_RESUME_USERNAME": username
-            },
-            "projectSettings": {
-                "framework": "nextjs"
-            }
+            "projectId": project_id,
+            "files": [{"file": file, "data": content} for file, content in files.items()],
         }
 
-        deploy_response = requests.post(
+        deployment_response = requests.post(
             "https://api.vercel.com/v13/deployments",
             headers=headers,
             json=deployment_data
         )
-        deploy_response.raise_for_status()
-        deployment_info = deploy_response.json()
 
-        project_url = f"https://{project_name}.vercel.app"
+        deployment_response.raise_for_status()
 
-        # Return success response
+        # Send success response
         return jsonify({
-            "message": "Project created successfully!",
-            "url": project_url,
-            "project_id": project_id,
-            "deployment_info": deployment_info,
-            "next_steps": {
-                "message": "Your deployment is being processed. Please note:",
-                "steps": [
-                    "1. Initial deployment may take a few minutes",
-                    "2. You can check the status at the Vercel dashboard",
-                    f"3. Your site will be available at: {project_url}",
-                    "4. To enable GitHub integration, install the Vercel GitHub App: https://github.com/apps/vercel"
-                ],
-                "vercel_dashboard": "https://vercel.com/dashboard"
-            }
-        }), 200
+            "success": True,
+            "message": "Vercel project created and deployed successfully!",
+            "projectId": project_id
+        }), 201
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"Vercel API error: {str(e)}")
-        error_details = e.response.text if hasattr(
-            e, 'response') and e.response is not None else str(e)
-        return jsonify({"error": "Vercel API error", "details": error_details}), 500
-
-    except Exception as e:
-        logging.exception(f"Unexpected error: {str(e)}")
-        return jsonify({"error": "An unexpected error occurred", "details": str(e)}), 500
+        return jsonify({"error": "Failed to create project", "details": str(e)}), 500
