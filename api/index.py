@@ -24,9 +24,8 @@ app = Flask(__name__)
 CORS(app, resources={
     r"/api/*": {
         "origins": [
-            "https://portlink-omega.vercel.app",
-            "http://localhost:3000",
-            "https://nethra-resume-460392.vercel.app"
+            "https://*.vercel.app",
+            "http://localhost:3000"
         ]
     }
 })
