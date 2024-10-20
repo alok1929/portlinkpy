@@ -25,15 +25,19 @@ app = Flask(__name__)
 allowed_origins = [
     "https://portlink-omega.vercel.app", "http://localhost:3000"]
 
+# Apply CORS globally (initial list)
+cors = CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+
+# Function to dynamically add an allowed origin
+
 
 def add_allowed_origin(origin):
     global allowed_origins
     if origin not in allowed_origins:
         allowed_origins.append(origin)
         print(f"Added new origin: {origin}")
-    
-
-CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+        # Re-apply CORS to include the new origin
+        cors.init_app(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 
 # OpenAI setup
