@@ -337,7 +337,7 @@ def create_vercel_project():
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Mail, GitHub, Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
+import { Mail,  Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
 
 interface ResumeInfo {
   Name: string
@@ -427,7 +427,6 @@ export default function PortfolioResume() {
                     rel="noopener noreferrer"
                     className="flex items-center justify-center text-blue-600 border border-blue-600 p-2 rounded-lg hover:bg-blue-50 transition"
                   >
-                    <GitHub className="w-4 h-4 mr-2" />
                     GitHub
                   </a>
                 )}
