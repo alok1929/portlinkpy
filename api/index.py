@@ -21,14 +21,18 @@ VERCEL_API_TOKEN = os.environ.get('vtoken')
 VERCEL_TEAM_ID = os.environ.get('VERCEL_TEAM_ID')
 
 app = Flask(__name__)
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "https://*.vercel.app",
-            "http://localhost:3000"
-        ]
-    }
-})
+
+allowed_origins = [
+    "https://portlink-omega.vercel.app", "http://localhost:3000"]
+
+
+def add_allowed_origin(origin):
+    global allowed_origins
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
+        print(f"Added new origin: {origin}")
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+
 
 # OpenAI setup
 client = OpenAI(
@@ -277,11 +281,34 @@ def create_vercel_project():
                 break
             else:
                 error_message = f"Vercel API error: {create_response.status_code} - {create_response.text}"
-                # Log the error
                 print(f"Project creation failed: {error_message}")
                 return jsonify({"error": "Failed to create project", "details": error_message}), create_response.status_code
 
         project_info = create_response.json()
+        project_id = project_info['id']
+
+        # Get the latest deployment for the project
+        deployments_response = requests.get(
+            f"https://api.vercel.com/v6/deployments",
+            headers=headers,
+            params={"projectId": project_id, "limit": 1}
+        )
+
+        if deployments_response.status_code == 200:
+            deployments = deployments_response.json()
+            if deployments['deployments']:
+                deployment_url = deployments['deployments'][0].get('url')
+                if deployment_url:
+                    full_deployment_url = f"https://{deployment_url}"
+                    add_allowed_origin(full_deployment_url)
+
+                    return jsonify({
+                        "success": True,
+                        "project_id": project_id,
+                        "project_name": project_name,
+                        "deploymentUrl": deployment_url,
+                        "message": "Vercel project created and deployed successfully!"
+                    }), 200
 
         # Define the files for the initial deployment
         files = {
