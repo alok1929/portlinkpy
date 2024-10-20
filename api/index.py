@@ -276,8 +276,6 @@ def create_vercel_project():
                 return jsonify({"error": "Failed to create project", "details": error_message}), create_response.status_code
 
         project_info = create_response.json()
-        project_id = project_info['id']
-        print(f"Project created successfully. ID: {project_id}")
 
         # Define the files for the initial deployment
         files = {
@@ -599,7 +597,6 @@ body {
                     "data": content
                 } for file, content in files.items()
             ],
-            "projectId": project_id,
             "target": "production",
             "framework": "nextjs"
         }
@@ -619,7 +616,6 @@ body {
         return jsonify({
             "success": True,
             "message": "Vercel project created and deployed successfully!",
-            "projectId": project_id,
             "projectName": project_name,
             "deploymentUrl": deployment_info.get('url')
         }), 201
