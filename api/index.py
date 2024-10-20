@@ -224,8 +224,6 @@ def get_resume_info(username):
         return jsonify({"error": str(e)}), 500
 
 
-
-
 @app.route('/api/create-vercel-project', methods=['POST'])
 def create_vercel_project():
     try:
@@ -285,15 +283,27 @@ def create_vercel_project():
                     "lint": "next lint"
                 },
                 "dependencies": {
-                    "next": "13.4.19",
-                    "react": "18.2.0",
-                    "react-dom": "18.2.0"
+                    "@radix-ui/react-icons": "^1.3.0",
+                    "@radix-ui/react-separator": "^1.1.0",
+                    "@radix-ui/react-slot": "^1.1.0",
+                    "class-variance-authority": "^0.7.0",
+                    "clsx": "^2.1.1",
+                    "lucide-react": "^0.453.0",
+                    "next": "14.2.15",
+                    "react": "^18",
+                    "react-dom": "^18",
+                    "tailwind-merge": "^2.5.4",
+                    "tailwindcss-animate": "^1.0.7"
                 },
                 "devDependencies": {
-                    "@types/node": "20.5.9",
-                    "@types/react": "18.2.21",
-                    "@types/react-dom": "18.2.7",
-                    "typescript": "5.2.2"
+                    "@types/node": "^20",
+                    "@types/react": "^18",
+                    "@types/react-dom": "^18",
+                    "eslint": "^8",
+                    "eslint-config-next": "14.2.15",
+                    "postcss": "^8",
+                    "tailwindcss": "^3.4.1",
+                    "typescript": "^5"
                 }
             }, indent=2),
             'tsconfig.json': json.dumps({
