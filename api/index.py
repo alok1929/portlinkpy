@@ -43,7 +43,7 @@ cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-print("firebase client created")
+print("firebase client created ahh")
 
 
 @app.route('/', methods=['GET'])
