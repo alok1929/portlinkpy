@@ -22,7 +22,14 @@ VERCEL_TEAM_ID = os.environ.get('VERCEL_TEAM_ID')
 
 app = Flask(__name__)
 CORS(app, resources={
-     r"/api/*": {"origins": ["https://portlink-omega.vercel.app", "http://localhost:3000"]}})
+    r"/api/*": {
+        "origins": [
+            "https://*.vercel.app",
+            "https://*.now.sh",
+            "http://localhost:3000"
+        ]
+    }
+})
 
 # OpenAI setup
 client = OpenAI(
