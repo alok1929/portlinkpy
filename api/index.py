@@ -324,13 +324,199 @@ def create_vercel_project():
                 "exclude": ["node_modules"]
             }, indent=2),
             'src/app/page.tsx': """
-export default function Home() {
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Mail, GitHub, Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
+
+interface ResumeInfo {
+  Name: string
+  Email: string
+  GitHub: string
+  LinkedIn: string
+  Education: string[]
+  "Professional Experience": Array<{
+    Role: string
+    Duration: string
+    Description: string
+  }>
+  Projects: Array<{
+    Name: string
+    Description: string
+    Technologies: string[]
+  }>
+  Skills: string[]
+  "Questions and Answers": Array<{
+    Question: string
+    Answer: string
+  }>
+}
+
+export default function PortfolioResume() {
+  const [resumeInfo, setResumeInfo] = useState<ResumeInfo | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchResumeData = async () => {
+      try {
+        const username = process.env.NEXT_PUBLIC_RESUME_USERNAME
+        if (!username) {
+          throw new Error('Username not configured')
+        }
+
+        const response = await fetch(`https://portlinkpy.vercel.app/api/resume/${username}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch resume data')
+        }
+
+        const data = await response.json()
+        setResumeInfo(data.extracted_info.resumeInfo)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load resume')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchResumeData()
+  }, [])
+
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center min-h-screen text-red-500">{error}</div>
+  }
+
+  if (!resumeInfo) {
+    return <div className="flex justify-center items-center min-h-screen">No resume data found</div>
+  }
+
   return (
-    <main>
-      <h1>Hello World</h1>
-    </main>
+    <div className="bg-gray-50 min-h-screen">
+      <div className="container mx-auto px-4 py-8">
+        <div className="lg:flex lg:space-x-8">
+          {/* Sidebar */}
+          <aside className="lg:w-1/3 mb-8 lg:mb-0">
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-3xl font-bold text-center mb-4">{resumeInfo.Name}</h2>
+              <div className="space-y-4">
+                <a
+                  href={`mailto:${resumeInfo.Email}`}
+                  className="flex items-center justify-center text-blue-600 border border-blue-600 p-2 rounded-lg hover:bg-blue-50 transition"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {resumeInfo.Email}
+                </a>
+                {resumeInfo.GitHub && (
+                  <a
+                    href={resumeInfo.GitHub}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center text-blue-600 border border-blue-600 p-2 rounded-lg hover:bg-blue-50 transition"
+                  >
+                    <GitHub className="w-4 h-4 mr-2" />
+                    GitHub
+                  </a>
+                )}
+                {resumeInfo.LinkedIn && (
+                  <a
+                    href={resumeInfo.LinkedIn}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center text-blue-600 border border-blue-600 p-2 rounded-lg hover:bg-blue-50 transition"
+                  >
+                    <Linkedin className="w-4 h-4 mr-2" />
+                    LinkedIn
+                  </a>
+                )}
+              </div>
+              <hr className="my-6" />
+              <div>
+                <h3 className="text-xl font-semibold flex items-center">
+                  <Star className="w-5 h-5 mr-2" />
+                  Skills
+                </h3>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {resumeInfo.Skills.map((skill, index) => (
+                    <span key={index} className="px-2 py-1 bg-gray-200 rounded text-sm">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <hr className="my-6" />
+              <div>
+                <h3 className="text-xl font-semibold flex items-center">
+                  <Book className="w-5 h-5 mr-2" />
+                  Education
+                </h3>
+                <ul className="list-disc ml-6 mt-2 space-y-2">
+                  {resumeInfo.Education.map((edu, index) => (
+                    <li key={index} className="text-gray-600">{edu}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="lg:w-2/3 space-y-8">
+            {/* Professional Experience Section */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-2xl font-bold flex items-center mb-6">
+                <Briefcase className="w-6 h-6 mr-2" />
+                Professional Experience
+              </h2>
+              {resumeInfo["Professional Experience"].map((exp, index) => (
+                <div key={index} className="mb-6">
+                  <h3 className="text-xl font-semibold">{exp.Role}</h3>
+                  <p className="text-gray-500 mb-2">{exp.Duration}</p>
+                  <p>{exp.Description}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Projects Section */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-2xl font-bold flex items-center mb-6">
+                <Code className="w-6 h-6 mr-2" />
+                Projects
+              </h2>
+              {resumeInfo.Projects.map((project, index) => (
+                <div key={index} className="mb-6">
+                  <h3 className="text-xl font-semibold">{project.Name}</h3>
+                  <p className="mb-2">{project.Description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {project.Technologies.map((tech, techIndex) => (
+                      <span key={techIndex} className="px-2 py-1 border border-gray-300 rounded text-sm">
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Q&A Section */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-2xl font-bold">Questions & Answers</h2>
+              {resumeInfo["Questions and Answers"].map((qa, index) => (
+                <div key={index} className="mb-6">
+                  <h3 className="text-xl font-semibold mb-2">Q: {qa.Question}</h3>
+                  <p>A: {qa.Answer}</p>
+                </div>
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
   )
 }
+
             """,
             'src/app/layout.tsx': """
 import './globals.css'
