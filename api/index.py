@@ -247,12 +247,13 @@ def create_vercel_project():
             create_project_data = {
                 "name": project_name,
                 "framework": "nextjs",
-                "environmentVariables": {
-                    "NEXT_PUBLIC_RESUME_USERNAME": {
+                "environmentVariables": [
+                    {
+                        "name": "NEXT_PUBLIC_RESUME_USERNAME",
                         "value": username,
                         "target": ["production", "preview", "development"]
                     }
-                }
+                ]
             }
 
             create_response = requests.post(
