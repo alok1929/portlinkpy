@@ -247,13 +247,9 @@ def create_vercel_project():
             create_project_data = {
                 "name": project_name,
                 "framework": "nextjs",
-                "environmentVariables": [
-                    {
-                        "key": "NEXT_PUBLIC_RESUME_USERNAME",
-                        "value": username,
-                        "target": ["production", "preview", "development"]
-                    }
-                ]
+                "environmentVariables": {
+                    "NEXT_PUBLIC_RESUME_USERNAME": username
+                }
             }
 
             create_response = requests.post(
@@ -270,10 +266,13 @@ def create_vercel_project():
                 break
             else:
                 error_message = f"Vercel API error: {create_response.status_code} - {create_response.text}"
+                # Log the error
+                print(f"Project creation failed: {error_message}")
                 return jsonify({"error": "Failed to create project", "details": error_message}), create_response.status_code
 
         project_info = create_response.json()
         project_id = project_info['id']
+        print(f"Project created successfully. ID: {project_id}")
 
         # Define the files for the initial deployment
         files = {
