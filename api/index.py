@@ -342,7 +342,7 @@ def create_vercel_project():
             }, indent=2),
             'src/app/page.tsx': """
 'use client'
-
+import config from '../config'
 import { useEffect, useState } from 'react'
 import { Mail,  Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
 
@@ -377,7 +377,7 @@ export default function PortfolioResume() {
   useEffect(() => {
     const fetchResumeData = async () => {
       try {
-        const username = process.env.NEXT_PUBLIC_RESUME_USERNAME
+        const username = config.resumeUsername
         if (!username) {
           throw new Error('Username not configured')
         }
@@ -592,7 +592,13 @@ a {
   color: inherit;
   text-decoration: none;
 }
-            """
+            """, 'src/config.ts': f"""
+const config = {{
+  resumeUsername: '{username}'
+}};
+
+export default config;
+"""
         }
 
         # Create initial deployment with files
