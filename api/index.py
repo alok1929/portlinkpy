@@ -249,7 +249,7 @@ def create_vercel_project():
                 "framework": "nextjs",
                 "environmentVariables": [
                     {
-                        "name": "NEXT_PUBLIC_RESUME_USERNAME",
+                        "key": "NEXT_PUBLIC_RESUME_USERNAME",
                         "value": username,
                         "target": ["production", "preview", "development"]
                     }
