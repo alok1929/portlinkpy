@@ -247,13 +247,12 @@ def create_vercel_project():
             create_project_data = {
                 "name": project_name,
                 "framework": "nextjs",
-                "environmentVariables": [
-                    {
-                        "key": "NEXT_PUBLIC_RESUME_USERNAME",
+                "environmentVariables": {
+                    "NEXT_PUBLIC_RESUME_USERNAME": {
                         "value": username,
                         "target": ["production", "preview", "development"]
                     }
-                ]
+                }
             }
 
             create_response = requests.post(
@@ -263,18 +262,21 @@ def create_vercel_project():
             )
 
             if create_response.status_code == 409:
+                # Project name conflict, append a unique identifier
                 project_name = f"{base_project_name}-{uuid.uuid4().hex[:6]}"
                 if attempt == max_retries - 1:
                     return jsonify({"error": "Failed to create project after multiple attempts", "details": "Name conflict persists"}), 409
             elif create_response.status_code in (200, 201):
+                # Project created successfully
                 break
             else:
-                error_message = f"Vercel API error: {create_response.status_code} - {create_response.text}"
-                return jsonify({"error": "Failed to create project", "details": error_message}), create_response.status_code
+                # Other error occurred
+                create_response.raise_for_status()
 
         project_info = create_response.json()
         project_id = project_info['id']
 
+        # [Rest of the code remains exactly the same as before...]
         # Define the files for the initial deployment
         files = {
             'package.json': json.dumps({
@@ -342,7 +344,7 @@ def create_vercel_project():
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Mail, Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
+import { Mail,  Linkedin, Book, Briefcase, Code, Star } from 'lucide-react'
 
 interface ResumeInfo {
   Name: string
@@ -556,22 +558,24 @@ export default function RootLayout({
 }
             """,
             'src/app/globals.css': """
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --max-width: 1100px;
+  --border-radius: 12px;
+  --font-mono: ui-monospace, Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono',
+    'Roboto Mono', 'Oxygen Mono', 'Ubuntu Monospace', 'Source Code Pro',
+    'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
@@ -582,6 +586,11 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
             """
         }
@@ -595,7 +604,7 @@ body {
                     "data": content
                 } for file, content in files.items()
             ],
-            "projectId": project_id,
+            "projectId": project_id,  # Add this line to associate the deployment with the project
             "target": "production",
             "framework": "nextjs"
         }
@@ -606,19 +615,20 @@ body {
             json=deployment_data
         )
 
-        if deployment_response.status_code not in (200, 201):
-            error_message = f"Vercel deployment error: {deployment_response.status_code} - {deployment_response.text}"
-            return jsonify({"error": "Failed to deploy project", "details": error_message}), deployment_response.status_code
+        deployment_response.raise_for_status()
 
-        deployment_info = deployment_response.json()
-
+        # Send success response
         return jsonify({
             "success": True,
             "message": "Vercel project created and deployed successfully!",
             "projectId": project_id,
             "projectName": project_name,
-            "deploymentUrl": deployment_info.get('url')
+            "deploymentUrl": deployment_response.json().get('url')
         }), 201
 
+    except RequestException as e:
+        # Handle network-related errors
+        return jsonify({"error": "Failed to communicate with Vercel API", "details": str(e)}), 500
     except Exception as e:
+        # Handle any other unexpected errors
         return jsonify({"error": "An unexpected error occurred", "details": str(e)}), 500
