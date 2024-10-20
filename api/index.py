@@ -246,7 +246,13 @@ def create_vercel_project():
         for attempt in range(max_retries):
             create_project_data = {
                 "name": project_name,
-                "framework": "nextjs"
+                "framework": "nextjs",
+                "environmentVariables": {
+                    "NEXT_PUBLIC_RESUME_USERNAME": {
+                        "value": username,
+                        "target": ["production", "preview", "development"]
+                    }
+                }
             }
 
             create_response = requests.post(
@@ -270,6 +276,7 @@ def create_vercel_project():
         project_info = create_response.json()
         project_id = project_info['id']
 
+        # [Rest of the code remains exactly the same as before...]
         # Define the files for the initial deployment
         files = {
             'package.json': json.dumps({
@@ -525,7 +532,6 @@ export default function PortfolioResume() {
     </div>
   )
 }
-
             """,
             'src/app/layout.tsx': """
 import './globals.css'
@@ -598,6 +604,8 @@ a {
                     "data": content
                 } for file, content in files.items()
             ],
+            "projectId": project_id,  # Add this line to associate the deployment with the project
+            "target": "production",
             "framework": "nextjs"
         }
 
