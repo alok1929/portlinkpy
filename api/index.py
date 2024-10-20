@@ -31,7 +31,9 @@ def add_allowed_origin(origin):
     if origin not in allowed_origins:
         allowed_origins.append(origin)
         print(f"Added new origin: {origin}")
-    CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+    
+
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 
 # OpenAI setup
