@@ -24,7 +24,7 @@ app = Flask(__name__)
 
 
 # Apply CORS globally (initial list)
-cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+cors = CORS(app, resources={r"/*": {"origins": ["*"]}})
 
 
 # OpenAI setup
