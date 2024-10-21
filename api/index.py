@@ -82,16 +82,42 @@ def parse_openai_response(response_text):
         "Skills": [],
     }
 
+    def standardize_project(project):
+        if isinstance(project, str):
+            return {
+                "Name": project,
+                "Description": "",
+                "Technologies": []
+            }
+        elif isinstance(project, dict):
+            return {
+                "Name": project.get("Name", ""),
+                "Description": project.get("Description", ""),
+                "Technologies": project.get("Technologies", [])
+            }
+        return {
+            "Name": "",
+            "Description": "",
+            "Technologies": []
+        }
+
     current_section = None
     for line in response_text.split('\n'):
         line = line.strip()
         if line in extracted_info:
             current_section = line
         elif current_section and line:
-            if isinstance(extracted_info[current_section], list):
+            if current_section == "Projects":
+                extracted_info[current_section].append(
+                    standardize_project(line))
+            elif isinstance(extracted_info[current_section], list):
                 extracted_info[current_section].append(line)
             else:
                 extracted_info[current_section] = line
+
+    # Ensure all projects are properly structured
+    extracted_info["Projects"] = [standardize_project(
+        p) for p in extracted_info["Projects"]]
 
     return extracted_info
 
@@ -528,18 +554,18 @@ export default function PortfolioResume() {
                 Projects
               </h2>
               {resumeInfo.Projects.map((project, index) => (
-                <div key={index} className="mb-6">
-                  <h3 className="text-xl font-semibold">{project.Name}</h3>
-                  <p className="mb-2">{project.Description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {project.Technologies.map((tech, techIndex) => (
-                      <span key={techIndex} className="px-2 py-1 border border-gray-300 rounded text-sm">
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div key={index} className="mb-6">
+              <h3 className="text-xl font-semibold">{project.Name}</h3>
+              <p className="mb-2">{project.Description}</p>
+              <div className="flex flex-wrap gap-2">
+                {Array.isArray(project.Technologies) && project.Technologies.map((tech, techIndex) => (
+                  <span key={techIndex} className="px-2 py-1 border border-gray-300 rounded text-sm">
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
             </div>
 
             {/* Q&A Section */}
